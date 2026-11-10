@@ -1,0 +1,1157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pirate Seas</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0b3954; }
+  body { font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #fff; user-select: none; -webkit-user-select: none; }
+  canvas { display: block; touch-action: none; cursor: crosshair; }
+  .hud { position: fixed; pointer-events: none; text-shadow: 0 2px 4px #0009; }
+  #stats { top: max(12px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); width: 190px; }
+  #haul { font-weight: 900; font-size: 30px; line-height: 1.05; color: #ffd45c; }
+  #haul small { display: block; font-size: 11px; font-weight: 800; letter-spacing: .14em; color: #fff; opacity: .85; }
+  #purse { margin-top: 3px; font-size: 13px; font-weight: 600; opacity: .9; }
+  .bar { height: 10px; margin-top: 6px; border-radius: 6px; background: #0007; border: 1px solid #ffffff40; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ff5d5d, #ffb36b); transition: width .2s; }
+  #side { top: max(12px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); width: 170px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  #yardBtn { pointer-events: auto; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: #ffd45c; color: #3a2400; font: 800 15px system-ui, sans-serif; cursor: pointer; box-shadow: 0 3px 0 #b8861b; }
+  #mini { width: 130px; height: 130px; border-radius: 50%; border: 2px solid #ffffff55; background: #0b3954aa; }
+  #rich { width: 100%; font-size: 13px; }
+  #rich h4 { margin: 0 0 2px; font-size: 11px; letter-spacing: .12em; opacity: .8; text-align: right; }
+  #rich div { display: flex; justify-content: space-between; gap: 8px; } #rich .mine { color: #ffd45c; font-weight: 700; }
+  #rich i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  #msg { top: 22%; left: 0; right: 0; text-align: center; font-size: 30px; font-weight: 900; transition: opacity .4s; }
+  #msg small { display: block; font-size: 15px; font-weight: 600; opacity: .85; }
+  #feed { top: calc(max(12px, env(safe-area-inset-top)) + 4px); left: 50%; transform: translateX(-50%); width: min(340px, 44vw); text-align: center; font-size: 13px; font-weight: 600; }
+  #feed div { transition: opacity .6s; }
+  #hint { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 40px); left: 50%; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); box-sizing: border-box; text-align: center; padding: 10px 14px; border-radius: 14px; background: #06283dcc; font-weight: 600; transition: opacity .6s; }
+  #net { bottom: max(10px, env(safe-area-inset-bottom)); left: max(14px, env(safe-area-inset-left)); font-size: 12px; opacity: .8; }
+  #hurt { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 150px #ff2a2a; opacity: 0; transition: opacity .3s; }
+  .panel { position: fixed; inset: 0; display: grid; place-items: center; background: #04192699; }
+  .panel[hidden], #fire[hidden], #stick[hidden] { display: none; }
+  .card { box-sizing: border-box; width: min(380px, calc(100vw - 32px)); max-height: 88vh; overflow: auto; padding: 20px; border-radius: 16px; background: #0f3550; border: 1px solid #ffffff2e; text-align: center; box-shadow: 0 12px 40px #0008; }
+  .card h2 { margin: 0; font-size: 26px; color: #ffd45c; } .card h3 { margin: 14px 0 4px; font-size: 13px; color: #8fe3ff; text-align: left; }
+  .card p { margin: 6px 0; font-size: 14px; opacity: .85; }
+  .card ol { margin: 0; padding-left: 24px; font-size: 14px; text-align: left; }
+  .card li span { float: right; font-variant-numeric: tabular-nums; }
+  button.go { width: 100%; min-height: 48px; margin-top: 14px; border: 0; border-radius: 12px; background: #ffd45c; color: #3a2400; font: 800 17px system-ui, sans-serif; cursor: pointer; }
+  button.alt { background: #ffffff1f; color: #fff; margin-top: 8px; }
+  .up { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; text-align: left; padding: 10px 0; border-top: 1px solid #ffffff1c; }
+  .up b { font-size: 16px; } .up small { display: block; opacity: .75; font-size: 12px; }
+  .up .pips { letter-spacing: 3px; color: #ffd45c; font-size: 13px; }
+  .up button { min-width: 96px; min-height: 44px; border: 0; border-radius: 10px; background: #ffd45c; color: #3a2400; font: 800 14px system-ui, sans-serif; cursor: pointer; }
+  .up button:disabled { background: #ffffff22; color: #ffffff88; cursor: default; }
+  #fire { position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(28px, env(safe-area-inset-bottom)); width: 96px; height: 96px; border-radius: 50%; border: 3px solid #ffffff88; background: #ff5d3d55; color: #fff; font: 900 17px system-ui, sans-serif; touch-action: none; }
+  #fire.on { background: #ff5d3daa; }
+  #stick { position: fixed; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid #ffffff55; background: #ffffff12; pointer-events: none; }
+  #stick i { position: absolute; left: 34px; top: 34px; width: 52px; height: 52px; border-radius: 50%; background: #ffffff70; }
+  @media (max-width: 640px) {
+    #rich { display: none; } #mini { width: 96px; height: 96px; }
+    #haul { font-size: 26px; } #stats { width: 150px; } #msg { font-size: 24px; }
+    #feed { top: calc(max(12px, env(safe-area-inset-top)) + 150px); width: calc(100vw - 32px); }
+    #hint { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 140px); }
+  }
+</style>
+<script src="https://cdn.multiplayeragent.com/sdk/mp.global.js"></script>
+<script type="importmap">{ "imports": { "three": "./libs/three.module.min.js" } }</script>
+</head>
+<body>
+<div class="hud" id="stats"><div id="haul"></div><div id="purse"></div><div class="bar"><i id="hpBar"></i></div></div>
+<div class="hud" id="side"><button id="yardBtn">⚓ Shipyard</button><canvas id="mini" width="260" height="260"></canvas><div id="rich"></div></div>
+<div class="hud" id="feed"></div>
+<div class="hud" id="msg"></div>
+<div class="hud" id="hint"></div>
+<div class="hud" id="net">Connecting…</div>
+<div id="hurt"></div>
+<div id="stick" hidden><i></i></div>
+<button id="fire" hidden>FIRE</button>
+<div class="panel" id="over" hidden><div class="card">
+  <h2>Sunk!</h2><p id="overSub"></p>
+  <h3>Best hauls</h3><ol id="board"><li>Loading…</li></ol>
+  <button class="go" id="again">Set sail again</button>
+  <button class="go alt" id="overYard">Shipyard</button>
+</div></div>
+<div class="panel" id="yard" hidden><div class="card">
+  <h2>Shipyard</h2><p id="yardPurse"></p>
+  <div id="yardRows"></div>
+  <button class="go" id="yardClose">Back to sea</button>
+</div></div>
+<script type="module">
+/* ═══ PIRATE SEAS · a Multiplayer Agent starter ═════════════════════════════════════════
+ * Sail, fire broadsides, sink rivals, grab the treasure. Drop-in, 2–16 players; bot ships
+ * fill the sea so one person alone still has rivals.
+ *
+ * WHERE THINGS ARE (search for the "── " headers):
+ *   CONFIG ........ ship speed, cannons, treasure, bots, upgrade prices
+ *   CONNECTION .... MP_CONNECT, joining, the offline room, who is host
+ *   SEA ........... renderer, waves, the archipelago built from the room's seed
+ *   SHIPS ......... the ship model (upgrades show on it), name tags, bobbing and sinking
+ *   TREASURE ...... floating barrels and chests (instanced)
+ *   EFFECTS ....... cannonballs, splashes, splinters, wakes, floating numbers, sounds
+ *   HOST .......... bot captains, treasure spawns, who grabbed what, sunk ships' loot.
+ *                   Only the host runs this and writes the shared fields.
+ *   ME ............ sailing, firing, getting hit, sinking, setting sail again
+ *   SAVES & SHIPYARD  your purse, upgrades and best haul (player saves), the shipyard card
+ *   HUD & RESULTS . haul, health, minimap, richest ships, the sunk card and leaderboard
+ *   INPUT ......... keyboard + mouse; thumb stick, tap-to-fire and FIRE on touch
+ *
+ * HOW THE MULTIPLAYER WORKS (a relay room: no server code, the HOST's browser runs the bots):
+ *   - Each player writes its OWN entity: `p` (one packed JSON field: x, z, heading, speed,
+ *     hp, max hp, sinking, sink count, who sank it, haul, upgrade levels, spawn shield)
+ *     about 10 times a second, `hb` (heartbeat) once a second, `n`/`c` (name, color) once.
+ *   - The HOST is the lowest sessionId among live players (heartbeat seen in the last 3s),
+ *     worked out every frame. Only the host writes the shared fields:
+ *       `sea`    {id, v, seed}: the archipelago seed (every client builds the same islands)
+ *       `loot`   {n, l}: every floating treasure [id, x, z, gold, kind] + the next id
+ *       `awards` the last 30 pickups and bounties [id, gold, player, sunk ship's name]
+ *       `bots`   every bot ship, 10 times a second
+ *     A new host adopts all of it from state and carries on: same sea, same bots.
+ *   - Cannonballs fly on every screen ("boom" event = an effect). Only the shooter's own
+ *     balls count (the host counts its bots'): a hit sends "hit" {to, d, by}. The ship's
+ *     owner takes the damage: a player its own hp, the host a bot's.
+ *   - "grab" {i, x, z} (intent): your hull is over treasure. The host gives it to the first who
+ *     asks and writes it in `awards`; you add the gold to your own haul and purse.
+ *   - Sinking: you set your own `p.dn` and bump `p.sk`. The host sees that in state, spills
+ *     part of your haul as treasure and pays the bounty to whoever sank you.
+ *   - Your purse, upgrades and best haul are YOUR save (player.data, CONFIG.saveNs), not room
+ *     state. Offline they go to localStorage.
+ *   - ?attract plays offline with bots only (the preview video is recorded from it).
+ *   - Leaderboard "best-haul": the most gold one ship carried before it sank.
+ */
+import * as THREE from "three";
+
+// ── CONFIG ──────────────────────────────────────────────────────────────────────────
+const CONFIG = {
+  ships: 8,              // bots fill the sea up to this many ships
+  world: 100,            // the sea is a circle this big (units); a reef stops you at the edge
+  islands: 11,           // islands in the archipelago (placed from the room's seed)
+  treasure: 24,          // floating treasure kept on the sea at once
+  treasureEvery: 1.2,    // seconds between new treasure while there is less than that
+  barrelGold: [5, 9],    // gold in a barrel (min, max)
+  chestGold: [12, 24],   // gold in a chest
+  goldMultiplier: 1,     // live ops can raise this for a gold rush event
+  grab: 3,               // sail this close to treasure to grab it
+  spill: 0.7,            // share of a sunk ship's haul that floats up as treasure
+  bounty: 25,            // gold for sinking a ship (plus 10% of what it carried)
+  hp: 100,               // ship health before hull upgrades
+  speed: 9,              // full-sail speed, units/s
+  cruise: 0.62,          // share of full speed when you press nothing
+  slow: 0.22,            // share of full speed while slowing down
+  accel: 5,              // units/s² to change speed
+  turn: 1.3,             // radians/s at speed
+  reload: 2.2,           // seconds for each broadside to reload
+  guns: 2,               // cannons per side before upgrades
+  ballSpeed: 28,         // cannonball speed out of the barrel
+  ballLift: 5,           // cannonball upward speed (more = longer range)
+  gravity: 13,
+  ballDamage: 12,
+  shield: 3,             // seconds nobody can hit you after you set sail
+  botRespawn: 5,         // seconds before a sunk bot sails again
+  botAim: 0.3,           // radians: how lined up a bot must be before it fires
+  botRange: 24,          // bots fire at ships closer than this
+  botSight: 42,          // bots go after ships closer than this
+  botLevels: 2,          // bots get random upgrades up to this level
+  upgradeCost: [60, 150, 300, 600], // purse gold for upgrade level 1, 2, 3, 4
+  saveNs: "pirate-seas", // player-save namespace (purse, upgrades, best haul)
+  board: "best-haul",    // leaderboard name
+};
+const UPGRADES = [
+  { name: "Hull", what: "+30 health" },
+  { name: "Cannons", what: "+1 cannon on each side" },
+  { name: "Sails", what: "+10% speed" },
+];
+const maxHp = (lv) => CONFIG.hp + 30 * lv[0];
+const gunsPerSide = (lv) => CONFIG.guns + lv[1];
+const topSpeed = (lv) => CONFIG.speed * (1 + 0.1 * lv[2]);
+const BOT_NAMES = ["Salty Meg", "One-Eye Finn", "Barnacle Bo", "Red Ruth", "Cap'n Kip", "Mad Morgan", "Old Pegs", "Lady Gale", "Cutlass Cy", "Briny Bess", "Squall", "Dread Ned"];
+const COLORS = ["#e8473f", "#3f8fe8", "#f2c230", "#3fbf6f", "#a05fe0", "#f08a2a", "#e85fa8", "#2ac7c0", "#f4f1e8", "#2f3540", "#8bd346", "#c0784a"];
+
+// ── CONNECTION ──────────────────────────────────────────────────────────────────────
+// The builder fills these in for this game. Downloaded from GitHub? Put your own pk_ key here.
+const MP_CONNECT = {
+  key: 'pk_REPLACE_ME',
+  room: 'pirate-seas',
+  endpoint: 'wss://live.multiplayeragent.com',
+  apiUrl: 'https://api.multiplayeragent.com',
+};
+const ATTRACT = new URLSearchParams(location.search).has("attract");
+if (ATTRACT) Object.assign(CONFIG, { ships: 8, world: 66, islands: 5, treasure: 30, reload: 1.3, botRespawn: 2, botLevels: 3, botSight: 60, shield: 0.5 });
+
+/** Same shape as the SDK client, kept in this tab: offline play and ?attract. */
+function localRoom() {
+  const id = "local", state = { entities: { players: { [id]: {} } }, shared: {} }, subs = [];
+  let queued = false;
+  const emit = () => { if (!queued) { queued = true; queueMicrotask(() => { queued = false; subs.forEach((f) => f(state)); }); } };
+  const put = (o, k, v) => { if (typeof k === "object") Object.assign(o, k); else o[k] = v; emit(); };
+  return {
+    sessionId: id, state, offline: true, live: { config: {} },
+    me: { set: (k, v) => put(state.entities.players[id], k, v) },
+    setShared: (k, v) => put(state.shared, k, v),
+    onState: (f) => { subs.push(f); f(state); }, onJoin() {}, onLeave() {}, on() {}, send() {},
+    onDisconnect() {}, onReconnect() {}, onLive() {}, leave: async () => {},
+  };
+}
+async function connect() {
+  if (ATTRACT || typeof MP === "undefined") return localRoom();
+  try {
+    const mp = await Promise.race([MP.join({ ...MP_CONNECT }), new Promise((_, no) => setTimeout(() => no(new Error("timed out")), 10000))]);
+    window.mp = mp; // the builder calls window.mp.leave() when the page closes
+    return mp;
+  } catch (e) {
+    console.warn("Playing offline:", e && e.message);
+    return localRoom();
+  }
+}
+const parse = (v, fb) => { if (typeof v !== "string") return fb; try { return JSON.parse(v); } catch { return fb; } };
+const memo = new Map();
+/** A JSON value from state, parsed once per change (read-only: never mutate what this returns). */
+function parseOnce(key, raw, fallback, map = (v) => v) {
+  const m = memo.get(key);
+  if (m && m.raw === raw) return m.v;
+  const v = map(parse(raw, fallback)); memo.set(key, { raw, v }); return v;
+}
+let net = null, S = { entities: { players: {} }, shared: {} }, joinedAt = 0;
+const seenHb = new Map();
+/** Players whose heartbeat moved in the last 3s (plus us), sorted by sessionId. */
+function livePlayers() {
+  const now = performance.now(), out = [];
+  for (const [id, p] of Object.entries(S.entities.players || {})) {
+    const s = seenHb.get(id);
+    if (!s || s.hb !== p.hb) seenHb.set(id, { hb: p.hb, at: now });
+    if (id === net.sessionId || now - seenHb.get(id).at < 3000) out.push(id);
+  }
+  return out.sort();
+}
+const isHost = () => livePlayers()[0] === net.sessionId;
+/** A live-ops number (owners change it without code), else the CONFIG default. */
+const liveNum = (key) => { const v = Number(net && net.live && net.live.config ? net.live.config[key] : NaN); return Number.isFinite(v) ? v : CONFIG[key]; };
+
+// ── SEA ─────────────────────────────────────────────────────────────────────────────
+const TAU = Math.PI * 2;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+renderer.shadowMap.enabled = true;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const SKY = "#9fd8ee";
+scene.background = new THREE.Color(SKY);
+scene.fog = new THREE.Fog(SKY, 75, 190);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 400);
+let tagSize = 0.05; // name tags are a fixed 26px tall on any screen
+function fit() {
+  renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight;
+  camera.fov = innerHeight > innerWidth ? 62 : 50; camera.updateProjectionMatrix();
+  tagSize = (26 * 2 * Math.tan((camera.fov * Math.PI) / 360)) / innerHeight;
+}
+addEventListener("resize", fit); addEventListener("orientationchange", fit); fit();
+scene.add(new THREE.HemisphereLight("#d8f3ff", "#1b4a63", 1.15));
+const sun = new THREE.DirectionalLight("#fff1d0", 2.1);
+sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 140 });
+scene.add(sun, sun.target);
+
+function canvasTex(w, h, paint) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h; paint(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function mulberry32(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const mesh = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; };
+const std = (color, more) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...more });
+
+/** Height of the sea at (x, z) at time t: three rolling sine waves. Ships and treasure ride it. */
+function waveAt(x, z, t) { return 0.24 * Math.sin(x * 0.19 + t * 1.1) + 0.18 * Math.sin(z * 0.23 - t * 0.9 + x * 0.05) + 0.1 * Math.sin((x + z) * 0.45 + t * 1.9); }
+// The water: a low-poly sheet that follows the camera, its corners moved by waveAt every frame.
+const OCEAN = 270, SEG = 90;
+const oceanGeo = new THREE.PlaneGeometry(OCEAN, OCEAN, SEG, SEG); oceanGeo.rotateX(-Math.PI / 2);
+const oceanPos = oceanGeo.attributes.position, oceanXZ = new Float32Array(oceanPos.count * 2);
+for (let i = 0; i < oceanPos.count; i++) { oceanXZ[i * 2] = oceanPos.getX(i); oceanXZ[i * 2 + 1] = oceanPos.getZ(i); }
+const ocean = mesh(oceanGeo, std("#1f8fc0", { roughness: 0.3, metalness: 0.05, flatShading: true, transparent: true, opacity: 0.8 }));
+ocean.receiveShadow = true; scene.add(ocean);
+const farSea = mesh(new THREE.RingGeometry(OCEAN / 2 - 4, 1600, 48).rotateX(-Math.PI / 2), std("#2c86b0", { roughness: 0.5 }), 0, -0.4, 0); scene.add(farSea);
+const seabed = mesh(new THREE.PlaneGeometry(OCEAN, OCEAN).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#0d4a6e" }), 0, -3, 0); scene.add(seabed);
+function updateOcean(t, cx, cz) {
+  const cell = OCEAN / SEG, ox = Math.round(cx / cell) * cell, oz = Math.round(cz / cell) * cell;
+  ocean.position.set(ox, 0, oz); farSea.position.set(ox, -0.4, oz); seabed.position.set(ox, -3, oz);
+  for (let i = 0; i < oceanPos.count; i++) oceanPos.setY(i, waveAt(oceanXZ[i * 2] + ox, oceanXZ[i * 2 + 1] + oz, t));
+  oceanPos.needsUpdate = true;
+}
+
+/** The archipelago from a seed: the same islands on every client. */
+function makeIslands(seed) {
+  const r = mulberry32(seed), out = [];
+  for (let tries = 0; out.length < CONFIG.islands && tries < 500; tries++) {
+    const a = r() * TAU, d = 20 + r() * (CONFIG.world - 30), rad = 4 + r() * 6.5, x = Math.sin(a) * d, z = Math.cos(a) * d;
+    if (out.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + rad + 13)) continue;
+    out.push({ x, z, r: rad, p1: r() * TAU, p2: r() * TAU, hill: 0.35 + r() * 0.4, peak: r() < 0.3, hut: r() < 0.4, palms: 1 + Math.floor(rad / 2.6) });
+  }
+  return out;
+}
+let isles = { seed: null, list: [] }, isleGroup = null;
+/** The islands of the current sea (rebuilt when the seed changes). */
+function islands() {
+  const s = seaMeta();
+  if (!s) return isles.list;
+  if (isles.seed !== s.seed) { isles = { seed: s.seed, list: makeIslands(s.seed) }; buildIslands(isles.list, s.seed); }
+  return isles.list;
+}
+const sandMat = std("#efd9a0", { roughness: 1, flatShading: true }), grassMat = std("#5cb85a", { flatShading: true }), rockMat = std("#8d9096", { flatShading: true });
+const trunkMat = std("#8a5a34"), leafMat = std("#2f9e4a", { flatShading: true, side: THREE.DoubleSide }), bedMat = new THREE.MeshBasicMaterial({ color: "#5fb7c9" });
+const foamRingMat = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.45, depthWrite: false });
+/** Palm fronds: a drooping cone whose rim is pulled in between the tips, so it reads as a star of leaves. */
+function frondGeo() {
+  const g = new THREE.ConeGeometry(1.7, 0.7, 14, 1, true).rotateX(Math.PI), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), r = Math.hypot(x, z); if (r > 0.5) { const a = Math.atan2(x, z), tip = Math.round((a / TAU) * 14) % 2 === 0, k = tip ? 1 : 0.3; p.setX(i, x * k); p.setZ(i, z * k); p.setY(i, p.getY(i) - (tip ? 0.35 : 0)); } }
+  g.computeVertexNormals(); return g;
+}
+/** Push every vertex of an island part out or in by the island's wobbly outline, so no two islands look alike. */
+function wobble(geo, o, bumps) {
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), a = Math.atan2(x, z), f = 1 + 0.14 * Math.sin(3 * a + o.p1) + 0.07 * Math.sin(5 * a + o.p2);
+    p.setX(i, x * f); p.setZ(i, z * f);
+    if (bumps) p.setY(i, p.getY(i) * (1 + 0.25 * Math.sin(x * 1.3 + o.p1) * Math.cos(z * 1.1 + o.p2)));
+  }
+  geo.computeVertexNormals(); return geo;
+}
+function buildIslands(list, seed) {
+  if (isleGroup) scene.remove(isleGroup);
+  isleGroup = new THREE.Group(); scene.add(isleGroup);
+  const r = mulberry32(seed ^ 0x5eed), palms = [], rocks = [], add = (m) => { isleGroup.add(m); return m; };
+  for (const o of list) {
+    add(mesh(wobble(new THREE.CylinderGeometry(o.r, o.r + 1.7, 1.8, 24), o), sandMat, o.x, -0.45, o.z)).receiveShadow = true;
+    const hill = add(mesh(wobble(new THREE.SphereGeometry(o.r * 0.78, 14, 6, 0, TAU, 0, Math.PI / 2), o, true), grassMat, o.x, 0.4, o.z));
+    hill.scale.y = o.hill; hill.castShadow = hill.receiveShadow = true;
+    if (o.peak) add(mesh(new THREE.ConeGeometry(o.r * 0.38, o.r * 1.0, 6), rockMat, o.x, 0.4 + o.r * 0.78 * o.hill * 0.8 + o.r * 0.4, o.z)).castShadow = true;
+    const bed = add(mesh(wobble(new THREE.CircleGeometry(o.r + 7, 28).rotateX(-Math.PI / 2), o), bedMat, o.x, -1.4, o.z));
+    bed.renderOrder = -1;
+    add(mesh(wobble(new THREE.RingGeometry(o.r + 1.2, o.r + 2.6, 36).rotateX(-Math.PI / 2), o), foamRingMat, o.x, 0.12, o.z)).name = "foam";
+    if (o.hut && !o.peak) {
+      const a = r() * TAU, hx = o.x + Math.sin(a) * o.r * 0.35, hz = o.z + Math.cos(a) * o.r * 0.35, hy = 0.4 + o.r * 0.78 * o.hill * 0.85;
+      add(mesh(new THREE.BoxGeometry(1.6, 1.2, 1.6), std("#a8743f"), hx, hy + 0.5, hz)).castShadow = true;
+      const roof = add(mesh(new THREE.ConeGeometry(1.5, 1.1, 4), std("#d9b26a", { flatShading: true }), hx, hy + 1.6, hz)); roof.rotation.y = Math.PI / 4; roof.castShadow = true;
+    }
+    for (let i = 0; i < o.palms; i++) {
+      const a = r() * TAU, d = o.r * (0.35 + r() * 0.4), px = o.x + Math.sin(a) * d, pz = o.z + Math.cos(a) * d;
+      const ground = 0.4 + o.r * 0.78 * o.hill * Math.sqrt(Math.max(0, 1 - (d / (o.r * 0.78)) ** 2));
+      palms.push({ x: px, y: ground - 0.2, z: pz, lean: 0.15 + r() * 0.3, dir: a + (r() - 0.5), s: 0.6 + r() * 0.35 });
+    }
+    for (let i = 0; i < 3; i++) { const a = r() * TAU, d = o.r + 1.5 + r() * 2.5; rocks.push({ x: o.x + Math.sin(a) * d, z: o.z + Math.cos(a) * d, s: 0.5 + r() * 0.9 }); }
+  }
+  // The reef: rocks all round the edge of the sea.
+  for (let i = 0; i < 110; i++) { const a = (i / 110) * TAU + r() * 0.05, d = CONFIG.world + 4 + r() * 7; rocks.push({ x: Math.sin(a) * d, z: Math.cos(a) * d, s: 1.2 + r() * 2.2 }); }
+  const M4 = new THREE.Matrix4(), L4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.13, 0.21, 3.4, 6).translate(0, 1.7, 0), trunkMat, palms.length);
+  const leaves = new THREE.InstancedMesh(frondGeo(), leafMat, palms.length);
+  palms.forEach((p, i) => {
+    M4.compose(v.set(p.x, p.y, p.z), q.setFromEuler(e.set(Math.cos(p.dir) * p.lean, 0, Math.sin(p.dir) * p.lean)), new THREE.Vector3(p.s, p.s, p.s));
+    trunks.setMatrixAt(i, M4);
+    leaves.setMatrixAt(i, L4.makeTranslation(0, 3.5, 0).premultiply(M4));
+  });
+  const reef = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), rockMat, rocks.length);
+  rocks.forEach((k, i) => { reef.setMatrixAt(i, M4.compose(v.set(k.x, -0.2, k.z), q.setFromEuler(e.set(r(), r() * TAU, r())), one.clone().multiplyScalar(k.s))); });
+  for (const m of [trunks, leaves, reef]) { m.castShadow = true; isleGroup.add(m); }
+}
+
+// ── SHIPS ───────────────────────────────────────────────────────────────────────────
+// A ship faces local +Z. Its left (port) side is local +X: side = +1 is port, -1 is starboard.
+const woodMat = std("#8a5a35"), deckMat = std("#c99a63"), darkMat = std("#5a3a22"), ironMat = std("#2b2d33", { roughness: 0.4, metalness: 0.6 });
+function hullShape(s) {
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 3.5 * s); sh.quadraticCurveTo(1.25 * s, 2.4 * s, 1.15 * s, 0.3 * s); sh.lineTo(1.0 * s, -2.7 * s);
+  sh.lineTo(-1.0 * s, -2.7 * s); sh.lineTo(-1.15 * s, 0.3 * s); sh.quadraticCurveTo(-1.25 * s, 2.4 * s, 0, 3.5 * s);
+  return sh;
+}
+/** An outline extruded upward from y0 by h (the hull narrows toward the keel when taper is set). */
+function extrudeUp(shape, y0, h, taper) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 8 });
+  g.rotateX(Math.PI / 2); g.translate(0, y0 + h, 0);
+  if (taper) { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const k = (p.getY(i) - y0) / h; p.setX(i, p.getX(i) * (0.55 + 0.45 * k)); p.setZ(i, p.getZ(i) * (0.8 + 0.2 * k)); } }
+  g.computeVertexNormals(); return g;
+}
+const HULL_GEO = extrudeUp(hullShape(1), 0, 1.4, true);
+const RAIL_GEO = (() => { const s = hullShape(1); s.holes.push(hullShape(0.86)); return extrudeUp(s, 1.4, 0.4, false); })();
+const SAIL_GEO = (() => { const g = new THREE.PlaneGeometry(2.8, 2.6, 6, 4), p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.cos((p.getX(i) / 1.4) * Math.PI / 2) * 0.45); g.computeVertexNormals(); return g; })();
+const CANNON_GEO = new THREE.CylinderGeometry(0.12, 0.15, 0.8, 8).rotateZ(Math.PI / 2);
+const MAST_GEO = new THREE.CylinderGeometry(0.09, 0.13, 1, 6), YARD_GEO = new THREE.CylinderGeometry(0.05, 0.05, 3.1, 5).rotateZ(Math.PI / 2);
+const CABIN_GEO = new THREE.BoxGeometry(1.9, 0.9, 1.3), ROOF_GEO = new THREE.BoxGeometry(2.1, 0.16, 1.5), SPRIT_GEO = new THREE.CylinderGeometry(0.06, 0.09, 2.2, 5);
+const NEST_GEO = new THREE.CylinderGeometry(0.38, 0.3, 0.35, 8), FLAG_GEO = new THREE.PlaneGeometry(1.1, 0.6).translate(0.55, 0, 0), PLATE_GEO = new THREE.BoxGeometry(0.08, 0.5, 0.8);
+const BUBBLE_GEO = new THREE.SphereGeometry(4.3, 20, 12), bubbleMat = new THREE.MeshBasicMaterial({ color: "#9ff3ff", transparent: true, opacity: 0.18, depthWrite: false });
+const colorMats = new Map(), sailMats = new Map();
+const colorMat = (c) => { if (!colorMats.has(c)) colorMats.set(c, std(c, { roughness: 0.6, side: THREE.DoubleSide })); return colorMats.get(c); };
+/** A sail in the ship's color with a white skull and crossbones, drawn in code. */
+function sailMat(c) {
+  if (sailMats.has(c)) return sailMats.get(c);
+  const dark = c === "#f4f1e8" ? "#2f3540" : "#ffffff";
+  const tex = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = c; g.fillRect(0, 0, w, h); g.fillStyle = "#00000018"; for (let x = 16; x < w; x += 22) g.fillRect(x, 0, 2, h);
+    g.strokeStyle = dark; g.lineWidth = 9; g.lineCap = "round"; g.beginPath(); g.moveTo(36, 86); g.lineTo(92, 112); g.moveTo(92, 86); g.lineTo(36, 112); g.stroke();
+    g.fillStyle = dark; g.beginPath(); g.arc(64, 56, 24, 0, TAU); g.fill(); g.fillRect(52, 70, 24, 14);
+    g.fillStyle = c; g.beginPath(); g.arc(55, 54, 6, 0, TAU); g.arc(73, 54, 6, 0, TAU); g.fill(); g.fillRect(58, 74, 3, 8); g.fillRect(67, 74, 3, 8);
+  });
+  const m = std("#ffffff", { map: tex, side: THREE.DoubleSide, roughness: 0.9 }); sailMats.set(c, m); return m;
+}
+/** Build a ship: hull, rail in its color, cabin, masts and sails, and one cannon per gun on each side. */
+function makeShip(color, lv, name) {
+  const g = new THREE.Group(), body = new THREE.Group(), hullMat = woodMat.clone(), cm = colorMat(color), sm = sailMat(color);
+  body.add(mesh(HULL_GEO, [deckMat, hullMat]), mesh(RAIL_GEO, cm));
+  body.add(mesh(CABIN_GEO, darkMat, 0, 1.85, -1.9), mesh(ROOF_GEO, cm, 0, 2.38, -1.9));
+  const sprit = mesh(SPRIT_GEO, darkMat, 0, 1.9, 3.9); sprit.rotation.x = 1.15; body.add(sprit);
+  const sailScale = 1 + 0.08 * lv[2];
+  const masts = [{ z: 0.6, h: 5.6, s: 1 }]; if (lv[2] >= 2) masts.push({ z: -0.9, h: 4.6, s: 0.78 });
+  for (const m of masts) {
+    const mast = mesh(MAST_GEO, darkMat, 0, 1.4 + m.h / 2, m.z); mast.scale.y = m.h; body.add(mast);
+    const yard = mesh(YARD_GEO, darkMat, 0, 1.4 + m.h - 0.35, m.z + 0.15); yard.scale.x = m.s * sailScale; body.add(yard);
+    const sail = mesh(SAIL_GEO, sm, 0, 1.4 + m.h - 1.75 * m.s * sailScale, m.z + 0.15); sail.scale.set(m.s * sailScale, m.s * sailScale, 1); body.add(sail);
+  }
+  body.add(mesh(NEST_GEO, darkMat, 0, 1.4 + 5.6 - 0.9, 0.6));
+  const flag = mesh(FLAG_GEO, cm, 0, 1.4 + 5.6 + 0.2, 0.6); body.add(flag);
+  const n = gunsPerSide(lv);
+  for (const side of [1, -1]) for (let i = 0; i < n; i++) body.add(mesh(CANNON_GEO, ironMat, side * 1.17, 1.15, n === 1 ? 0 : -1.5 + (2.9 * i) / (n - 1)));
+  for (let i = 0; i < lv[0]; i++) for (const side of [1, -1]) body.add(mesh(PLATE_GEO, ironMat, side * 1.12, 0.75, -1.9 + i * 1.1));
+  body.traverse((m) => { if (m.isMesh) m.castShadow = true; });
+  const bubble = mesh(BUBBLE_GEO, bubbleMat, 0, 1.6, 0); bubble.visible = false;
+  g.add(body, bubble);
+  const tag = name ? makeTag() : null; if (tag) g.add(tag.sprite);
+  g.userData = { body, flag, hullMat, bubble, tag, tagKey: "", flash: 0, sinkT: 0, roll: 0, rollV: 0, wakeT: 0 };
+  scene.add(g); return g;
+}
+function removeShip(g) { scene.remove(g); g.userData.hullMat.dispose(); if (g.userData.tag) { g.userData.tag.tex.dispose(); g.userData.tag.sprite.material.dispose(); } }
+/** A name tag with a health bar, redrawn only when the name or health changes. */
+function makeTag() {
+  const c = document.createElement("canvas"); c.width = 256; c.height = 72;
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false })); sprite.position.y = 9; sprite.renderOrder = 5;
+  return { c, tex, sprite };
+}
+function drawTag(tag, name, hp, mhp, gold) {
+  const g = tag.c.getContext("2d"); g.clearRect(0, 0, 256, 72);
+  g.font = "bold 28px system-ui"; g.textAlign = "center"; g.lineWidth = 6; g.strokeStyle = "#000b";
+  const text = gold > 0 ? `${name} ◆${gold}` : name;
+  g.strokeText(text, 128, 30); g.fillStyle = "#fff"; g.fillText(text, 128, 30);
+  g.fillStyle = "#000a"; g.fillRect(48, 44, 160, 14); g.fillStyle = hp / mhp > 0.4 ? "#5fe07a" : "#ff5d5d"; g.fillRect(50, 46, 156 * Math.max(0, hp / mhp), 10);
+  tag.tex.needsUpdate = true;
+}
+/** Put a ship model where ship `s` is: riding the waves, rolling from its own broadsides, or sinking. */
+function poseShip(g, s, t, dt) {
+  const u = g.userData, fx = Math.sin(s.h), fz = Math.cos(s.h);
+  const pitch = (waveAt(s.x + fx * 2.5, s.z + fz * 2.5, t) - waveAt(s.x - fx * 2.5, s.z - fz * 2.5, t)) / 5;
+  const roll = (waveAt(s.x + fz * 1.2, s.z - fx * 1.2, t) - waveAt(s.x - fz * 1.2, s.z + fx * 1.2, t)) / 2.4;
+  u.rollV += (-u.roll * 30 - u.rollV * 4) * dt; u.roll += u.rollV * dt; // the kick of a broadside, springing back
+  u.sinkT = s.dn ? u.sinkT + dt : 0;
+  const k = Math.min(1, u.sinkT / 3);
+  g.visible = u.sinkT < 3.4;
+  g.position.set(s.x, waveAt(s.x, s.z, t) - 0.75 - k * k * 5, s.z);
+  g.rotation.y = s.h;
+  u.body.rotation.set(-Math.atan(pitch) - k * 0.6, 0, Math.atan(roll) + u.roll + k * 0.35);
+  u.flag.rotation.y = Math.PI / 2 + Math.sin(t * 7 + s.x) * 0.35;
+  u.flash = Math.max(0, u.flash - dt * 4); u.hullMat.emissive.setRGB(u.flash * 0.9, u.flash * 0.15, 0);
+  u.bubble.visible = !!s.sh && !s.dn; if (u.bubble.visible) u.bubble.scale.setScalar(1 + Math.sin(t * 5) * 0.03);
+  if (u.tag) {
+    const key = `${s.name}|${Math.round(s.hp)}|${s.mhp}|${s.g}`;
+    if (key !== u.tagKey) { u.tagKey = key; drawTag(u.tag, s.name, s.hp, s.mhp, s.g); }
+    u.tag.sprite.visible = !s.dn; u.tag.sprite.scale.set(tagSize * 256 / 72, tagSize, 1);
+  }
+  if (s.sp > 2 && !s.dn && (u.wakeT -= dt) <= 0) { u.wakeT = 0.07; foam(s.x - fx * 2.8, s.z - fz * 2.8, 0.5, 1.4); foam(s.x + fx * 3 + fz * 0.9, s.z + fz * 3 - fx * 0.9, 0.3, 0.8); foam(s.x + fx * 3 - fz * 0.9, s.z + fz * 3 + fx * 0.9, 0.3, 0.8); }
+  if (s.dn && u.sinkT < 3 && Math.random() < dt * 14) burst(s.x + (Math.random() - 0.5) * 3, 1, s.z + (Math.random() - 0.5) * 3, "#cfd6dc", 1, 1, "smoke");
+}
+
+// ── TREASURE ────────────────────────────────────────────────────────────────────────
+// kind 0 = barrel, 1 = chest, 2 = a sunk ship's chest (bigger). Drawn instanced, bobbing on the waves.
+const MAXT = 90;
+function tPart(geo, mat) { const m = new THREE.InstancedMesh(geo, mat, MAXT); m.count = 0; m.frustumCulled = false; m.castShadow = true; scene.add(m); return m; }
+const barrels = tPart(new THREE.CylinderGeometry(0.45, 0.45, 1.05, 10), std("#9c6b3c"));
+const hoops = tPart(new THREE.CylinderGeometry(0.47, 0.47, 0.12, 10), ironMat);
+const chests = tPart(new THREE.BoxGeometry(1.2, 0.72, 0.86), std("#8b5a2b"));
+const lids = tPart(new THREE.BoxGeometry(1.28, 0.24, 0.92), std("#ffcf3f", { metalness: 0.6, roughness: 0.3, emissive: "#6b4a00", emissiveIntensity: 0.5 }));
+const halos = tPart(new THREE.RingGeometry(1.15, 1.45, 28).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#ffe680", transparent: true, opacity: 0.75, depthWrite: false }));
+halos.castShadow = false;
+const M = new THREE.Matrix4(), L = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(0, 0, 0, "YXZ");
+const P3 = new THREE.Vector3(), S3 = new THREE.Vector3(), ONE = new THREE.Vector3(1, 1, 1);
+function drawTreasure(t) {
+  let nb = 0, nc = 0, nh = 0;
+  for (const it of lootList()) {
+    if (me.picked.has(it.i) || nh >= MAXT) continue;
+    const y = waveAt(it.x, it.z, t), spin = t * 0.5 + it.i, s = it.k === 2 ? 1.35 : 1;
+    if (it.k === 0) {
+      E.set(Math.PI / 2, spin, 0); M.compose(P3.set(it.x, y + 0.1, it.z), Q.setFromEuler(E), ONE); barrels.setMatrixAt(nb, M);
+      L.makeTranslation(0, 0.3, 0).premultiply(M); hoops.setMatrixAt(nb * 2, L); L.makeTranslation(0, -0.3, 0).premultiply(M); hoops.setMatrixAt(nb * 2 + 1, L); nb++;
+    } else {
+      E.set(Math.sin(t * 2 + it.i) * 0.12, spin, Math.cos(t * 1.7 + it.i) * 0.12); M.compose(P3.set(it.x, y + 0.2 * s, it.z), Q.setFromEuler(E), S3.set(s, s, s)); chests.setMatrixAt(nc, M);
+      L.makeTranslation(0, 0.46, 0).premultiply(M); lids.setMatrixAt(nc++, L);
+    }
+    const pulse = s * (1 + Math.sin(t * 3 + it.i) * 0.12);
+    halos.setMatrixAt(nh++, M.compose(P3.set(it.x, y + 0.3, it.z), Q.identity(), S3.set(pulse, 1, pulse)));
+  }
+  barrels.count = nb; hoops.count = nb * 2; chests.count = lids.count = nc; halos.count = nh;
+  for (const m of [barrels, hoops, chests, lids, halos]) m.instanceMatrix.needsUpdate = true;
+}
+
+// ── EFFECTS ─────────────────────────────────────────────────────────────────────────
+// Cannonballs fly on every screen. Only the shooter's own balls (and, on the host, the bots')
+// count: they report hits. Everyone else's are just for show and stop at the first hull.
+const MAXB = 240, balls = [];
+const ballMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.38, 8, 6), std("#1d1f24", { roughness: 0.4, metalness: 0.5 }), MAXB);
+ballMesh.frustumCulled = false; ballMesh.count = 0; scene.add(ballMesh);
+/** Fire one broadside from ship `s`. `owner` = whose hits these balls count for, or null (just for show). */
+function broadside(s, side, owner) {
+  const n = gunsPerSide(s.lv), fx = Math.sin(s.h), fz = Math.cos(s.h), px = side * fz, pz = -side * fx;
+  for (let i = 0; i < n; i++) {
+    const along = n === 1 ? 0 : -1.5 + (2.9 * i) / (n - 1), sp = CONFIG.ballSpeed * (0.94 + Math.random() * 0.12), wob = (Math.random() - 0.5) * 0.08;
+    const x = s.x + fx * along + px * 1.6, z = s.z + fz * along + pz * 1.6;
+    if (balls.length >= MAXB) balls.shift();
+    balls.push({ x, y: 1.3, z, vx: (px + fx * wob) * sp + fx * s.sp, vy: CONFIG.ballLift + Math.random() * 0.8, vz: (pz + fz * wob) * sp + fz * s.sp, from: s.id, owner });
+    burst(x + px * 0.6, 1.4, z + pz * 0.6, "#e8e8e8", 3, 1.5, "smoke"); burst(x + px * 0.5, 1.3, z + pz * 0.5, "#ffd36b", 2, 2);
+  }
+  const g = shipModel(s.id); if (g) g.userData.rollV += side * 1.4;
+  sfx("boom", near(s));
+}
+/** The first ship a cannonball is inside right now, or null. */
+function shipHitBy(b) {
+  if (b.y > 2.8) return null;
+  for (const s of fleet) {
+    if (s.id === b.from || s.dn) continue;
+    const dx = b.x - s.x, dz = b.z - s.z;
+    if (dx * dx + dz * dz > 16) continue;
+    const along = dx * Math.sin(s.h) + dz * Math.cos(s.h), side = dx * Math.cos(s.h) - dz * Math.sin(s.h);
+    if (Math.abs(along) < 3.3 && Math.abs(side) < 1.4) return s;
+  }
+  return null;
+}
+function stepBalls(dt, t) {
+  let n = 0;
+  for (let i = balls.length - 1; i >= 0; i--) {
+    const b = balls[i];
+    b.vy -= CONFIG.gravity * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+    const hit = shipHitBy(b);
+    if (hit) {
+      burst(b.x, 1.6, b.z, "#8a5a35", 8, 4); burst(b.x, 1.6, b.z, "#ffb347", 3, 3); burst(b.x, 2, b.z, "#9aa3ab", 2, 1, "smoke");
+      const g = shipModel(hit.id); if (g) g.userData.flash = 1;
+      if (b.owner && !hit.sh && (b.owner === net.sessionId || host.acting)) damage(hit, b.owner);
+      sfx("hit", near(hit));
+      balls.splice(i, 1); continue;
+    }
+    if (b.y < waveAt(b.x, b.z, t)) { burst(b.x, 0.2, b.z, "#ffffff", 7, 3.5); foam(b.x, b.z, 0.6, 1.2); sfx("splash", near(b) * 0.6); balls.splice(i, 1); continue; }
+  }
+  for (const b of balls) { M.compose(P3.set(b.x, b.y, b.z), Q.identity(), ONE); ballMesh.setMatrixAt(n++, M); }
+  ballMesh.count = n; ballMesh.instanceMatrix.needsUpdate = true;
+}
+/** A counted cannonball hit ship `target`. Its owner takes the damage: me, the host (bots), or by event. */
+function damage(target, by) {
+  const d = CONFIG.ballDamage;
+  if (target === me) hurtMe(d, by);
+  else if (target.bot) { if (host.acting) hitBot(host.bots.get(target.id), d, by); else net.send("hit", { to: target.id, d, by }); }
+  else net.send("hit", { to: target.id, d, by });
+  if (by === net.sessionId) floatText(target.x, 4, target.z, "-" + d, "#ffd45c");
+}
+// Particles: little cubes that pop and fall (sparks, splinters, spray), and puffs that drift up and grow (smoke).
+const MAXP = 600, bits = [], colorCache = new Map(), WHITE = new THREE.Color("#fff");
+function particleMesh(geo, mat) { const m = new THREE.InstancedMesh(geo, mat, MAXP); m.frustumCulled = false; m.count = 0; for (let i = 0; i < MAXP; i++) m.setColorAt(i, WHITE); scene.add(m); return m; }
+const bitMesh = particleMesh(new THREE.BoxGeometry(0.24, 0.24, 0.24), new THREE.MeshBasicMaterial());
+const puffMesh = particleMesh(new THREE.IcosahedronGeometry(0.3, 0), new THREE.MeshLambertMaterial({ flatShading: true }));
+function burst(x, y, z, color, n, speed = 3, kind = "bit") {
+  if (!colorCache.has(color)) colorCache.set(color, new THREE.Color(color));
+  for (let i = 0; i < n; i++) {
+    if (bits.length >= MAXP) bits.shift();
+    const a = Math.random() * TAU, s = speed * (0.4 + Math.random()), smoke = kind === "smoke";
+    bits.push({ x, y, z, vx: Math.sin(a) * s, vy: smoke ? 1 + Math.random() : 2 + Math.random() * speed * 1.4, vz: Math.cos(a) * s, life: smoke ? 1.2 + Math.random() * 0.6 : 0.5 + Math.random() * 0.5, max: 0, smoke, c: colorCache.get(color) });
+    bits[bits.length - 1].max = bits[bits.length - 1].life;
+  }
+}
+function stepBits(dt) {
+  let n = 0;
+  for (let i = bits.length - 1; i >= 0; i--) {
+    const p = bits[i]; p.life -= dt;
+    if (p.life <= 0) { bits.splice(i, 1); continue; }
+    if (p.smoke) { p.vx *= 0.95; p.vz *= 0.95; } else p.vy -= 16 * dt;
+    p.x += p.vx * dt; p.y = Math.max(0, p.y + p.vy * dt); p.z += p.vz * dt;
+  }
+  let np = 0;
+  for (const p of bits) {
+    const k = p.life / p.max;
+    if (p.smoke) { const s = (1.2 + (1 - k) * 2.6) * Math.min(1, k * 3); M.compose(P3.set(p.x, p.y, p.z), Q.identity(), S3.set(s, s, s)); puffMesh.setMatrixAt(np, M); puffMesh.setColorAt(np++, p.c); }
+    else { const s = Math.min(1, k * 2.5); M.compose(P3.set(p.x, p.y, p.z), Q.identity(), S3.set(s, s, s)); bitMesh.setMatrixAt(n, M); bitMesh.setColorAt(n++, p.c); }
+  }
+  for (const [m, c] of [[bitMesh, n], [puffMesh, np]]) { m.count = c; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+}
+// Foam: flat white discs on the water (wakes and splashes) that spread and fade.
+const MAXF = 500, foams = [];
+const foamMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 10).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.42, depthWrite: false }), MAXF);
+foamMesh.frustumCulled = false; foamMesh.count = 0; scene.add(foamMesh);
+function foam(x, z, size, life) { if (foams.length >= MAXF) foams.shift(); foams.push({ x, z, size, life, max: life }); }
+function stepFoam(dt, t) {
+  let n = 0;
+  for (let i = foams.length - 1; i >= 0; i--) { const f = foams[i]; f.life -= dt; if (f.life <= 0) foams.splice(i, 1); }
+  for (const f of foams) { const k = f.life / f.max, s = f.size * (1 + (1 - k) * 1.8) * Math.min(1, k * 3); M.compose(P3.set(f.x, waveAt(f.x, f.z, t) + 0.06, f.z), Q.identity(), S3.set(s, 1, s)); foamMesh.setMatrixAt(n++, M); }
+  foamMesh.count = n; foamMesh.instanceMatrix.needsUpdate = true;
+}
+// Floating numbers ("+12", "-9"), from a small pool of sprites.
+const floats = [];
+function floatText(x, y, z, text, color) {
+  if (ATTRACT) return;
+  let f = floats.find((o) => o.life <= 0);
+  if (!f) {
+    if (floats.length >= 14) return;
+    const c = document.createElement("canvas"); c.width = 160; c.height = 56;
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true })); sprite.scale.set(4.4, 1.55, 1); sprite.renderOrder = 6; scene.add(sprite);
+    f = { c, tex, sprite, life: 0 }; floats.push(f);
+  }
+  const g = f.c.getContext("2d"); g.clearRect(0, 0, 160, 56); g.font = "900 40px system-ui"; g.textAlign = "center"; g.lineWidth = 7; g.strokeStyle = "#000b";
+  g.strokeText(text, 80, 42); g.fillStyle = color; g.fillText(text, 80, 42); f.tex.needsUpdate = true;
+  f.sprite.position.set(x, y, z); f.life = 1.1; f.sprite.visible = true;
+}
+function stepFloats(dt) { for (const f of floats) { if (f.life <= 0) continue; f.life -= dt; f.sprite.position.y += dt * 2.2; f.sprite.material.opacity = Math.min(1, f.life * 2); f.sprite.visible = f.life > 0; } }
+let audio = null, noise = null; // made on the first tap or key (browsers block sound before that)
+const near = (s) => Math.max(0, 1 - Math.hypot(s.x - me.x, s.z - me.z) / 70);
+function sfx(kind, vol = 1) {
+  if (!audio || ATTRACT || vol <= 0.02) return;
+  const t = audio.currentTime, g = audio.createGain(); g.connect(audio.destination);
+  if (!noise) { noise = audio.createBuffer(1, audio.sampleRate, audio.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const hiss = (freq, type, dur, v) => { const src = audio.createBufferSource(), f = audio.createBiquadFilter(); src.buffer = noise; f.type = type; f.frequency.value = freq; src.connect(f).connect(g); g.gain.setValueAtTime(v * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); src.start(t); src.stop(t + dur); };
+  const tone = (f0, f1, dur, v, type = "sine", at = 0) => { const o = audio.createOscillator(), og = audio.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t + at); o.frequency.exponentialRampToValueAtTime(f1, t + at + dur); og.gain.setValueAtTime(v * vol, t + at); og.gain.exponentialRampToValueAtTime(0.0001, t + at + dur); o.connect(og).connect(audio.destination); o.start(t + at); o.stop(t + at + dur); };
+  if (kind === "boom") { hiss(380, "lowpass", 0.6, 0.35); tone(90, 35, 0.35, 0.25); }
+  else if (kind === "splash") hiss(1400, "bandpass", 0.3, 0.12);
+  else if (kind === "hit") { hiss(900, "lowpass", 0.25, 0.25); tone(140, 50, 0.2, 0.12, "square"); }
+  else if (kind === "coin") { tone(880, 880, 0.09, 0.08, "triangle"); tone(1320, 1320, 0.16, 0.08, "triangle", 0.08); }
+  else if (kind === "sink") tone(220, 45, 1.4, 0.12, "sawtooth");
+  else if (kind === "buy") [523, 659, 784].forEach((f, i) => tone(f, f, 0.14, 0.08, "triangle", i * 0.08));
+}
+
+// ── HOST ────────────────────────────────────────────────────────────────────────────
+const host = { acting: false, sea: null, loot: [], nextId: 1, awards: [], bots: new Map(), sinks: new Map(), spawnIn: 0,
+  dirtyLoot: false, dirtyAwards: false, lastBots: 0, lastLoot: 0, lastAwards: 0 };
+const seaMeta = () => (host.acting ? host.sea : parseOnce("sea", S.shared.sea, null));
+const lootList = () => (host.acting ? host.loot : parseOnce("loot", S.shared.loot, { l: [] }, (v) => (v.l || []).map(([i, x, z, g, k]) => ({ i, x, z, g, k }))));
+const awardList = () => (host.acting ? host.awards : parseOnce("awards", S.shared.awards, []));
+const botList = () => (host.acting ? [...host.bots.values()] : parseOnce("bots", S.shared.bots, [], (l) => l.map((b) => ({ ...b, id: b.i, name: String(b.n), color: b.c, lv: b.lv || [0, 0, 0], bot: true }))));
+const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const rint = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+
+/** Become host: take over the sea, treasure, awards and bots exactly as state has them.
+ *  Returns false (try again next frame) if we just joined a busy room whose sea hasn't reached us yet. */
+function adopt() {
+  if (!S.shared.sea && livePlayers().length > 1 && performance.now() - joinedAt < 2500) return false;
+  host.acting = true;
+  host.sea = parse(S.shared.sea, null);
+  const loot = parse(S.shared.loot, { n: 1, l: [] });
+  host.loot = (loot.l || []).map(([i, x, z, g, k]) => ({ i, x, z, g, k }));
+  host.awards = parse(S.shared.awards, []);
+  host.nextId = Math.max(loot.n || 1, 1 + Math.max(0, ...host.loot.map((l) => l.i), ...host.awards.map((a) => a[0])));
+  host.bots.clear();
+  for (const b of parse(S.shared.bots, [])) host.bots.set(b.i, { id: b.i, name: String(b.n), color: b.c, x: b.x, z: b.z, h: b.h, sp: b.sp, hp: b.hp, mhp: b.mhp, dn: b.dn, rs: b.rs, lv: b.lv || [0, 0, 0], g: b.g || 0, sh: b.sh || 0, shUntil: Date.now() + 1000, bot: true, cd: [0.5, 0.5], think: 0, goal: null });
+  host.sinks.clear();
+  for (const s of fleet) if (!s.bot) host.sinks.set(s.id, s.sk || 0); // sinks before we took over were paid by the last host
+  if (!host.sea) {
+    host.sea = { id: 1, v: 1, seed: ATTRACT ? 4242 : (Math.random() * 1e9) | 0 };
+    net.setShared("sea", JSON.stringify(host.sea));
+    islands(); for (let i = 0; i < CONFIG.treasure; i++) spawnTreasure();
+  }
+  return true;
+}
+/** Somewhere open to put a ship: not on an island, and (if asked) away from other ships. */
+function freeSpot(awayFrom) {
+  for (let i = 0; i < 80; i++) {
+    const a = Math.random() * TAU, d = 12 + Math.random() * (CONFIG.world - 22), x = Math.sin(a) * d, z = Math.cos(a) * d;
+    if (islands().some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 7)) continue;
+    if (awayFrom && i < 60 && fleet.some((s) => s.id !== awayFrom && !s.dn && Math.hypot(s.x - x, s.z - z) < 26)) continue;
+    return { x, z, h: Math.atan2(-x, -z) + (Math.random() - 0.5) };
+  }
+  return { x: 0, z: 0, h: 0 };
+}
+function spawnTreasure(x, z, gold, kind) {
+  if (x === undefined) {
+    const list = islands(), o = list[Math.floor(Math.random() * list.length)];
+    for (let i = 0; i < 20; i++) {
+      const a = Math.random() * TAU, d = o ? o.r + 5 + Math.random() * 12 : 10 + Math.random() * 50;
+      x = (o ? o.x : 0) + Math.sin(a) * d; z = (o ? o.z : 0) + Math.cos(a) * d;
+      if (Math.hypot(x, z) < CONFIG.world - 6 && !list.some((p) => Math.hypot(p.x - x, p.z - z) < p.r + 3)) break;
+    }
+    kind = Math.random() < 0.65 ? 0 : 1;
+    gold = Math.round(rint(...(kind ? CONFIG.chestGold : CONFIG.barrelGold)) * liveNum("goldMultiplier"));
+  }
+  host.loot.push({ i: host.nextId++, x: +x.toFixed(1), z: +z.toFixed(1), g: gold, k: kind });
+  while (host.loot.length > 70) host.loot.splice(host.loot.findIndex((l) => l.k < 2), 1); // too many: the oldest sea treasure sinks
+  host.dirtyLoot = true;
+}
+/** "grab": the first ship to ask for a treasure gets it. Bots keep their gold; players read it from awards.
+ *  A player's intent carries where its ship was (its position update may arrive just after the intent). */
+function grab(i, by, at) {
+  const it = host.loot.find((l) => l.i === i), s = fleet.find((f) => f.id === by), p = at && Number.isFinite(at.x) ? at : s;
+  if (!it || !s || s.dn || Math.hypot(p.x - s.x, p.z - s.z) > 15 || Math.hypot(p.x - it.x, p.z - it.z) > CONFIG.grab + 1.5) return;
+  host.loot = host.loot.filter((l) => l !== it); host.dirtyLoot = true;
+  const b = host.bots.get(by);
+  if (b) b.g += it.g; else award(by, it.g, "", it.i);
+}
+function award(to, gold, sunk, id = host.nextId++) { host.awards = [...host.awards.slice(-29), [id, gold, to, sunk]]; host.dirtyAwards = true; }
+/** A ship went down: part of its haul floats up as treasure, and whoever sank it gets the bounty. */
+function shipSank(s, by) {
+  const spill = Math.floor((s.g || 0) * CONFIG.spill), chestsN = Math.min(4, Math.ceil(spill / 30));
+  for (let i = 0; i < chestsN; i++) { const a = Math.random() * TAU; spawnTreasure(s.x + Math.sin(a) * 2.5, s.z + Math.cos(a) * 2.5, Math.ceil(spill / chestsN), 2); }
+  const pay = CONFIG.bounty + Math.floor((s.g || 0) * 0.1), killer = fleet.find((f) => f.id === by);
+  if (killer && killer.bot) { const b = host.bots.get(by); if (b) b.g += pay; }
+  else if (killer) award(by, pay, s.name);
+  const line = { v: s.name, by: killer ? killer.name : "the sea" };
+  addFeed(line); net.send("sunk", line);
+}
+/** Players who sank since we last looked (they write it in their own `p`): spill and pay. */
+function watchSinks() {
+  for (const s of fleet) {
+    if (s.bot) continue;
+    const seen = host.sinks.get(s.id);
+    if (seen === undefined) host.sinks.set(s.id, s.sk || 0);
+    else if ((s.sk || 0) > seen) { host.sinks.set(s.id, s.sk); shipSank(s, s.by); }
+  }
+}
+function hitBot(b, d, by) {
+  if (!b || b.dn || b.sh) return;
+  b.hp -= clamp(+d || 0, 0, CONFIG.ballDamage);
+  if (b.hp > 0) return;
+  Object.assign(b, { hp: 0, dn: 1, sp: 0, rs: Date.now() + CONFIG.botRespawn * 1000 });
+  shipSank(b, by); b.g = 0;
+}
+/** Bots fill the sea up to CONFIG.ships; one leaves when a person joins. A bot never wears a person's color. */
+function fitBots() {
+  const humans = livePlayers().length, want = Math.max(0, CONFIG.ships - humans);
+  const people = new Set(fleet.filter((s) => !s.bot).map((s) => s.color));
+  for (const b of host.bots.values()) if (people.has(b.color)) { const used = new Set(fleet.map((s) => s.color)); b.color = COLORS.find((c) => !used.has(c)) || b.color; }
+  while (host.bots.size > want) host.bots.delete([...host.bots.keys()].pop());
+  while (host.bots.size < want) {
+    const used = new Set([...fleet.map((s) => s.color), ...[...host.bots.values()].map((b) => b.color)]), names = new Set([...host.bots.values()].map((b) => b.name));
+    const id = "b" + Math.random().toString(36).slice(2, 6), lv = [0, 1, 2].map(() => rint(0, CONFIG.botLevels));
+    const spot = ATTRACT ? ringSpot(host.bots.size) : freeSpot(id);
+    host.bots.set(id, { id, name: BOT_NAMES.find((n) => !names.has(n)) || "Pirate", color: COLORS.find((c) => !used.has(c)) || "#ccc", ...spot,
+      sp: CONFIG.speed * 0.6, hp: maxHp(lv), mhp: maxHp(lv), dn: 0, rs: 0, lv, g: 0, sh: 0, shUntil: 0, bot: true, cd: [Math.random(), Math.random()], think: 0, goal: null });
+  }
+}
+/** In the preview, bots start on a ring around you, side-on, so the broadsides start at once. */
+function ringSpot(i) { const a = (i / 7) * TAU + 0.3, d = 15 + (i % 3) * 5; return { x: Math.sin(a) * d, z: Math.cos(a) * d, h: a + Math.PI / 2 }; }
+function respawnBot(b) {
+  const spot = freeSpot(b.id);
+  Object.assign(b, spot, { sp: 0, hp: b.mhp, dn: 0, sh: 1, shUntil: Date.now() + CONFIG.shield * 1000, g: 0, goal: null });
+}
+/** What a bot wants: the nearest ship it can see (it sticks with a target for a while), else gold, else a wander. */
+function botGoal(b) {
+  const keep = b.goal && Math.random() < 0.8 && (b.goal.ship ? fleet.some((s) => s.id === b.goal.ship && !s.dn && !s.sh && Math.hypot(s.x - b.x, s.z - b.z) < CONFIG.botSight + 10) : b.goal.gold ? host.loot.some((l) => l.i === b.goal.gold) : false);
+  if (keep) return b.goal;
+  let foe = null, fd = CONFIG.botSight, gold = null, gd = 45;
+  for (const s of fleet) { if (s.id === b.id || s.dn || s.sh) continue; const d = Math.hypot(s.x - b.x, s.z - b.z); if (d < fd) { fd = d; foe = s; } }
+  for (const it of host.loot) { const d = Math.hypot(it.x - b.x, it.z - b.z) - (it.k === 2 ? 15 : 0); if (d < gd) { gd = d; gold = it; } }
+  if (foe && (fd < 26 || !gold || Math.random() < 0.55)) return { ship: foe.id };
+  if (gold) return { gold: gold.i };
+  const p = freeSpot(); return { roam: true, x: p.x, z: p.z };
+}
+/** Turn away from an island ahead (and keep turning for a moment), or back toward the middle near the reef. */
+function avoid(s, want) {
+  const now = performance.now();
+  if (s.dodgeUntil > now) return s.dodgeH;
+  for (const look of [5, 11]) {
+    const ax = s.x + Math.sin(s.h) * look, az = s.z + Math.cos(s.h) * look;
+    for (const o of islands()) if (Math.hypot(ax - o.x, az - o.z) < o.r + 3.5) {
+      s.dodgeH = s.h + (angleDiff(s.h, Math.atan2(o.x - s.x, o.z - s.z)) >= 0 ? 1.4 : -1.4); s.dodgeUntil = now + 900;
+      return s.dodgeH;
+    }
+  }
+  return Math.hypot(s.x, s.z) > CONFIG.world - 12 ? Math.atan2(-s.x, -s.z) : want;
+}
+/** One bot captain: chase a ship and turn side-on to it, fire when it's lined up; or go for gold. */
+function stepBot(b, dt, t) {
+  if (b.dn) { if (t >= b.rs) respawnBot(b); return; }
+  if (b.sh && t > b.shUntil) b.sh = 0;
+  b.cd[0] -= dt; b.cd[1] -= dt;
+  if ((b.think -= dt) <= 0) { b.think = 0.5 + Math.random() * 0.4; b.goal = botGoal(b); }
+  let want = b.h, throttle = 0.9;
+  const g = b.goal || {}, foe = g.ship && fleet.find((s) => s.id === g.ship && !s.dn);
+  if (foe) {
+    const fx = foe.x + Math.sin(foe.h) * foe.sp * 0.7, fz = foe.z + Math.cos(foe.h) * foe.sp * 0.7; // lead the target a little
+    const d = Math.hypot(fx - b.x, fz - b.z), to = Math.atan2(fx - b.x, fz - b.z);
+    if (d > CONFIG.botRange * 0.8) want = to + Math.sin(t / 900 + b.x) * 0.3;
+    else {
+      const a1 = to + Math.PI / 2, a2 = to - Math.PI / 2;
+      want = Math.abs(angleDiff(a1, b.h)) < Math.abs(angleDiff(a2, b.h)) ? a1 : a2;
+      if (d < 11) want += angleDiff(want, to) > 0 ? 0.5 : -0.5; // too close: open the gap
+    }
+    for (const side of [1, -1]) if (d < CONFIG.botRange && b.cd[side > 0 ? 0 : 1] <= 0 && !foe.sh && Math.abs(angleDiff(to, b.h + side * Math.PI / 2)) < CONFIG.botAim) {
+      b.cd[side > 0 ? 0 : 1] = CONFIG.reload * (1 + Math.random() * 0.4);
+      broadside(b, side, b.id); net.send("boom", boomMsg(b, side));
+    }
+  } else if (g.gold) { const it = host.loot.find((l) => l.i === g.gold); if (it) { want = Math.atan2(it.x - b.x, it.z - b.z); throttle = 1; } else b.think = 0; }
+  else if (g.roam) { want = Math.atan2(g.x - b.x, g.z - b.z); if (Math.hypot(g.x - b.x, g.z - b.z) < 8) b.think = 0; }
+  want = avoid(b, want);
+  sail(b, clamp(angleDiff(want, b.h) * 2.2, -1, 1), throttle, dt);
+  for (const it of host.loot) if (Math.hypot(it.x - b.x, it.z - b.z) < CONFIG.grab) { grab(it.i, b.id); break; }
+}
+function hostTick(dt, now) {
+  if (!host.acting && !adopt()) return;
+  const t = Date.now();
+  islands(); fitBots(); watchSinks();
+  host.spawnIn -= dt;
+  if (host.spawnIn <= 0 && host.loot.filter((l) => l.k < 2).length < CONFIG.treasure) { host.spawnIn = CONFIG.treasureEvery; spawnTreasure(); }
+  for (const b of host.bots.values()) stepBot(b, dt, t);
+  if (now - host.lastBots > 100) {
+    host.lastBots = now;
+    net.setShared("bots", JSON.stringify([...host.bots.values()].map((b) => ({ i: b.id, n: b.name, c: b.color, x: +b.x.toFixed(2), z: +b.z.toFixed(2), h: +b.h.toFixed(3), sp: +b.sp.toFixed(1), hp: Math.max(0, Math.round(b.hp)), mhp: b.mhp, dn: b.dn, rs: b.rs, lv: b.lv, g: b.g, sh: b.sh }))));
+  }
+  if (host.dirtyLoot && now - host.lastLoot > 200) { host.dirtyLoot = false; host.lastLoot = now; net.setShared("loot", JSON.stringify({ n: host.nextId, l: host.loot.map((l) => [l.i, l.x, l.z, l.g, l.k]) })); }
+  if (host.dirtyAwards && now - host.lastAwards > 150) { host.dirtyAwards = false; host.lastAwards = now; net.setShared("awards", JSON.stringify(host.awards)); }
+}
+
+// ── ME ──────────────────────────────────────────────────────────────────────────────
+const myName = (() => { try { return localStorage.getItem("mpa-name") || ""; } catch { return ""; } })() ||
+  ["Salty", "Lucky", "Brave", "Jolly", "Stormy", "Sly"][Math.floor(Math.random() * 6)] + " " + ["Gull", "Shark", "Crab", "Parrot", "Eel", "Otter"][Math.floor(Math.random() * 6)];
+const me = { id: "", name: myName, color: COLORS[0], x: 0, z: 0, h: 0, sp: 0, hp: CONFIG.hp, mhp: CONFIG.hp, dn: 0, sk: 0, by: "", byName: "", g: 0, lv: [0, 0, 0], sh: 0,
+  shUntil: 0, cd: [0, 0], sunkAt: 0, afloat: false, picked: new Map(), applied: new Set(), lastSend: 0, hurtAt: 0, goal: null, think: 0, bot: false };
+const input = { turn: 0, throttle: CONFIG.cruise, want: null, fire: 0 };
+
+/** Everyone's ships: live players (where this screen draws them), the bots, and me. Rebuilt every frame. */
+let fleet = [];
+function setSail() {
+  const spot = ATTRACT ? { x: 0, z: 0, h: 0.4 } : freeSpot(me.id);
+  Object.assign(me, spot, { sp: CONFIG.speed * CONFIG.cruise, hp: me.mhp, dn: 0, g: 0, sh: 1, shUntil: performance.now() + CONFIG.shield * 1000, cd: [0, 0], afloat: true, by: "" });
+  if (ATTRACT) me.hp = me.mhp = 400;
+  publish(true);
+}
+/** Fire one side (+1 port / -1 starboard) if it is loaded. */
+function fire(side) {
+  if (me.dn || !me.afloat || me.cd[side > 0 ? 0 : 1] > 0) return;
+  me.cd[side > 0 ? 0 : 1] = CONFIG.reload;
+  me.sh = 0; // firing drops your spawn shield
+  broadside(me, side, net.sessionId); net.send("boom", boomMsg(me, side));
+}
+/** FIRE button / Space: the side facing the nearest ship in range, else both sides. */
+function fireAuto() {
+  let best = null, bd = CONFIG.botRange * 1.2;
+  for (const s of fleet) { if (s === me || s.dn) continue; const d = Math.hypot(s.x - me.x, s.z - me.z); if (d < bd) { bd = d; best = s; } }
+  if (!best) { fire(1); fire(-1); return; }
+  fire((best.x - me.x) * Math.cos(me.h) - (best.z - me.z) * Math.sin(me.h) > 0 ? 1 : -1);
+}
+const boomMsg = (s, side) => ({ i: s.id, s: side, x: +s.x.toFixed(2), z: +s.z.toFixed(2), h: +s.h.toFixed(3), sp: +s.sp.toFixed(1), n: gunsPerSide(s.lv) });
+/** Move ship `s`: speed eases toward throttle × top speed, turning is slower when slow; islands, ships and the reef push back. */
+function sail(s, turn, throttle, dt) {
+  s.sp += clamp(topSpeed(s.lv) * throttle - s.sp, -CONFIG.accel * dt, CONFIG.accel * dt);
+  s.h += turn * CONFIG.turn * (0.35 + 0.65 * Math.min(1, s.sp / CONFIG.speed)) * dt;
+  s.x += Math.sin(s.h) * s.sp * dt; s.z += Math.cos(s.h) * s.sp * dt;
+  for (const o of islands()) { const dx = s.x - o.x, dz = s.z - o.z, d = Math.hypot(dx, dz) || 1, min = o.r + 2.2; if (d < min) { s.x = o.x + (dx / d) * min; s.z = o.z + (dz / d) * min; s.sp *= 1 - 2 * dt; } }
+  for (const o of fleet) { if (o.id === s.id || o.dn) continue; const dx = s.x - o.x, dz = s.z - o.z, d = Math.hypot(dx, dz); if (d < 4.8 && d > 0.01) { s.x += (dx / d) * (4.8 - d) * 0.5; s.z += (dz / d) * (4.8 - d) * 0.5; } }
+  const r = Math.hypot(s.x, s.z); if (r > CONFIG.world) { s.x *= CONFIG.world / r; s.z *= CONFIG.world / r; s.sp *= 1 - 2 * dt; }
+}
+/** A cannonball hit me: I take it off my own health. */
+function hurtMe(d, by) {
+  if (me.dn || me.sh || !me.afloat) return;
+  me.hp -= clamp(+d || 0, 0, CONFIG.ballDamage); me.hurtAt = performance.now();
+  floatText(me.x, 4, me.z, "-" + d, "#ff6b6b");
+  if (me.hp <= 0) sinkMe(by);
+  publish(true);
+}
+function sinkMe(by) {
+  const killer = fleet.find((s) => s.id === by);
+  Object.assign(me, { hp: 0, dn: 1, sp: 0, sk: me.sk + 1, by: by || "", byName: killer ? killer.name : "", sunkAt: performance.now() });
+  sfx("sink");
+  if (me.g > save.best) { save.best = me.g; saveDirty = true; }
+  if (ATTRACT) setTimeout(setSail, 2000);
+}
+function myTick(dt) {
+  if (!seaMeta()) return;
+  if (!me.afloat) setSail();
+  me.cd[0] -= dt; me.cd[1] -= dt;
+  if (me.sh && performance.now() > me.shUntil) me.sh = 0;
+  if (!me.dn) {
+    if (ATTRACT) { stepAutopilot(dt); }
+    else {
+      let turn = input.turn;
+      if (input.want !== null) turn = clamp(angleDiff(input.want, me.h) * 2.2, -1, 1);
+      sail(me, turn, input.throttle, dt);
+    }
+    for (const [i, at] of me.picked) if (performance.now() - at > 2500) me.picked.delete(i); // still there after 2.5s? the host said no: show it again
+    for (const it of lootList()) if (!me.picked.has(it.i) && Math.hypot(it.x - me.x, it.z - me.z) < CONFIG.grab) {
+      me.picked.set(it.i, performance.now());
+      if (host.acting) grab(it.i, me.id); else net.send("grab", { i: it.i, x: +me.x.toFixed(1), z: +me.z.toFixed(1) });
+    }
+  }
+  for (const [i, gold, to, sunk] of awardList()) {
+    if (to !== me.id || me.applied.has(i)) continue;
+    me.applied.add(i);
+    if (!me.dn) me.g += gold;
+    save.purse += gold; saveDirty = true;
+    if (me.g > save.best) { save.best = me.g; saveDirty = true; }
+    floatText(me.x, 5, me.z, "+" + gold, "#ffd45c"); burst(me.x, 2, me.z, "#ffd45c", 10, 3); sfx("coin");
+    if (sunk) banner(`You sank ${esc(sunk)}!`, `+${gold} bounty`);
+  }
+  publish(false);
+}
+/** The preview sails you like a bot captain. */
+function stepAutopilot(dt) {
+  if ((me.think -= dt) <= 0) { me.think = 0.6; me.goal = botGoal(me); }
+  const s = me, g = s.goal || {}, foe = g.ship && fleet.find((f) => f.id === g.ship && !f.dn);
+  let want = s.h;
+  if (foe) {
+    const d = Math.hypot(foe.x - s.x, foe.z - s.z), to = Math.atan2(foe.x - s.x, foe.z - s.z);
+    if (d > CONFIG.botRange * 0.8) want = to;
+    else { const a1 = to + Math.PI / 2, a2 = to - Math.PI / 2; want = Math.abs(angleDiff(a1, s.h)) < Math.abs(angleDiff(a2, s.h)) ? a1 : a2; }
+    for (const side of [1, -1]) if (d < CONFIG.botRange && Math.abs(angleDiff(to, s.h + side * Math.PI / 2)) < CONFIG.botAim) fire(side); // fire() checks the reload
+  } else if (g.gold) { const it = lootList().find((l) => l.i === g.gold); if (it) want = Math.atan2(it.x - s.x, it.z - s.z); }
+  else if (g.roam) want = Math.atan2(g.x - s.x, g.z - s.z);
+  sail(s, clamp(angleDiff(avoid(s, want), s.h) * 2.2, -1, 1), 0.9, dt);
+}
+function publish(force) {
+  const now = performance.now();
+  if (!force && now - me.lastSend < 100) return; // ~10/s
+  me.lastSend = now;
+  net.me.set("p", JSON.stringify({ x: +me.x.toFixed(2), z: +me.z.toFixed(2), h: +me.h.toFixed(3), sp: +me.sp.toFixed(1), hp: Math.max(0, Math.round(me.hp)), mhp: me.mhp, dn: me.dn, sk: me.sk, by: me.by, g: me.g, lv: me.lv, sh: me.sh }));
+}
+
+// Everyone else's ships, eased toward where they said they were (plus a little dead reckoning).
+const views = new Map(); // id -> { g, key, x, z, h, raw, at }
+const shipModel = (id) => (id === me.id ? me.model : views.get(id)?.g);
+function syncShips(dt, t) {
+  const now = performance.now(), seen = new Set(), list = [], live = new Set(livePlayers()), k = 1 - Math.pow(0.002, dt);
+  const remote = [];
+  for (const [id, p] of Object.entries(S.entities.players || {})) {
+    if (id === net.sessionId || !live.has(id)) continue;
+    const q = parseOnce("p:" + id, p.p, null);
+    if (q) remote.push({ ...q, id, name: String(p.n ?? "Pirate"), color: p.c || "#ccc", lv: q.lv || [0, 0, 0], bot: false, raw: p.p });
+  }
+  for (const b of botList()) remote.push(host.acting ? b : { ...b, raw: S.shared.bots });
+  for (const r of remote) {
+    seen.add(r.id);
+    let v = views.get(r.id);
+    const key = r.color + r.lv.join("") + (ATTRACT ? "" : r.name);
+    if (v && v.key !== key) { removeShip(v.g); v = null; } // new color or upgrades: rebuild the model
+    if (!v) { v = { g: makeShip(r.color, r.lv, ATTRACT ? "" : r.name), key, x: r.x, z: r.z, h: r.h, raw: r.raw, at: now }; views.set(r.id, v); }
+    if (r.raw !== v.raw) { v.raw = r.raw; v.at = now; }
+    if (host.acting && r.bot) { v.x = r.x; v.z = r.z; v.h = r.h; } // the host draws its own bots from its simulation
+    else {
+      const age = Math.min(0.3, (now - v.at) / 1000), tx = r.x + Math.sin(r.h) * r.sp * age, tz = r.z + Math.cos(r.h) * r.sp * age;
+      if (Math.hypot(tx - v.x, tz - v.z) > 15) { v.x = tx; v.z = tz; v.h = r.h; } // respawned: jump
+      v.x += (tx - v.x) * k; v.z += (tz - v.z) * k; v.h += angleDiff(r.h, v.h) * k;
+    }
+    const rec = host.acting && r.bot ? r : { ...r, x: v.x, z: v.z, h: v.h };
+    list.push(rec);
+    poseShip(v.g, rec, t, dt);
+  }
+  for (const [id, v] of views) if (!seen.has(id)) { removeShip(v.g); views.delete(id); }
+  const myKey = me.color + me.lv.join("");
+  if (me.model && me.modelKey !== myKey) { removeShip(me.model); me.model = null; }
+  if (!me.model) { me.model = makeShip(me.color, me.lv, ""); me.modelKey = myKey; me.model.add(myRing, reloadBars[0], reloadBars[1]); }
+  if (me.afloat) poseShip(me.model, me, t, dt);
+  me.model.visible = me.afloat && me.model.visible;
+  for (const [i, side] of [[0, 1], [1, -1]]) { const r = reloadBars[i], k2 = clamp(1 - me.cd[i] / CONFIG.reload, 0, 1); r.scale.z = Math.max(0.05, k2); r.material.color.set(k2 >= 1 ? "#ffd45c" : "#ffffff"); r.position.x = side * 2.1; r.visible = !me.dn && !ATTRACT; }
+  myRing.visible = !me.dn && !ATTRACT;
+  list.push(me);
+  fleet = list;
+}
+const myRing = mesh(new THREE.RingGeometry(4.6, 5.0, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#ffd45c", transparent: true, opacity: 0.7, depthWrite: false }), 0, 0.85, 0);
+const reloadBars = [0, 1].map(() => mesh(new THREE.BoxGeometry(0.22, 0.1, 4.4), new THREE.MeshBasicMaterial({ color: "#ffd45c" }), 0, 0.9, 0));
+/** Two people in one color (or a person in a bot's color): the one with the higher sessionId picks a free color. */
+function fixColor() {
+  const others = Object.entries(S.entities.players || {}).filter(([id]) => id !== net.sessionId), bots = botList();
+  if (!others.some(([id, p]) => p.c === me.color && id < net.sessionId) && !bots.some((b) => b.color === me.color)) return;
+  const taken = new Set([...others.map(([, p]) => p.c), ...bots.map((b) => b.color)]), free = COLORS.find((c) => !taken.has(c));
+  if (free && free !== me.color) { me.color = free; net.me.set("c", free); }
+}
+
+// ── SAVES & SHIPYARD ────────────────────────────────────────────────────────────────
+let save = { v: 1, at: 0, purse: 0, best: 0, lv: [0, 0, 0] }, saveDirty = false, lastSave = 0, player = null, board = null;
+const LOCAL_SAVE = "pirate-seas.save";
+function useSave(s) {
+  if (!s || !s.v) return;
+  save = { ...save, ...s, purse: Math.max(0, +s.purse || 0), best: Math.max(0, +s.best || 0), lv: [0, 1, 2].map((k) => clamp(+(s.lv || [])[k] || 0, 0, 4)) };
+  me.lv = [...save.lv]; me.mhp = maxHp(me.lv); if (!me.afloat) me.hp = me.mhp;
+}
+async function loadSave() {
+  if (ATTRACT) return;
+  try { useSave(parse(localStorage.getItem(LOCAL_SAVE), null)); } catch {}
+  if (!player) return;
+  try { const r = await player.data.get(CONFIG.saveNs); if (r && r.data && r.data.v && (r.data.at || 0) >= (save.at || 0)) useSave(r.data); } catch {}
+}
+function storeSave() {
+  if (ATTRACT) return;
+  save.at = Date.now(); saveDirty = false; lastSave = performance.now();
+  try { localStorage.setItem(LOCAL_SAVE, JSON.stringify(save)); } catch {}
+  if (!player) return;
+  player.data.set(save, { namespace: CONFIG.saveNs }).catch((e) => { if (e && e.current) player.data.set(save, { namespace: CONFIG.saveNs, version: e.current.version }).catch(() => {}); });
+}
+function buy(k) {
+  const lvl = save.lv[k], cost = CONFIG.upgradeCost[lvl];
+  if (cost === undefined || save.purse < cost) return;
+  save.purse -= cost; save.lv[k]++; me.lv = [...save.lv];
+  const before = me.mhp; me.mhp = maxHp(me.lv); if (!me.dn) me.hp += me.mhp - before;
+  sfx("buy"); storeSave(); publish(true); drawYard();
+}
+function drawYard() {
+  $("yardPurse").innerHTML = `Purse <b style="color:#ffd45c">◆ ${save.purse}</b> · upgrades are saved for next time`;
+  $("yardRows").innerHTML = UPGRADES.map((u, k) => {
+    const lvl = save.lv[k], cost = CONFIG.upgradeCost[lvl];
+    return `<div class="up"><div><b>${u.name}</b> <span class="pips">${"●".repeat(lvl)}${"○".repeat(4 - lvl)}</span><small>${u.what}</small></div>` +
+      `<button data-k="${k}" ${cost === undefined || save.purse < cost ? "disabled" : ""}>${cost === undefined ? "Max" : "◆ " + cost}</button></div>`;
+  }).join("");
+  $("yardRows").querySelectorAll("button").forEach((b) => (b.onclick = () => buy(+b.dataset.k)));
+}
+function openYard() { drawYard(); $("yard").hidden = false; }
+
+// ── HUD & RESULTS ───────────────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let netDown = false, boardFor = -1, msgUntil = 0, lastSubmit = 0, submitted = 0;
+const startedAt = performance.now();
+function banner(title, sub) { $("msg").innerHTML = `${title}${sub ? `<small>${esc(sub)}</small>` : ""}`; msgUntil = performance.now() + 2200; }
+const feedLines = [];
+function addFeed(l) { feedLines.push({ text: `${esc(l.by)} sank ${esc(l.v)}`, at: performance.now() }); while (feedLines.length > 3) feedLines.shift(); }
+function hud() {
+  const now = performance.now();
+  $("hurt").style.opacity = now - me.hurtAt < 250 && !ATTRACT ? 0.7 : 0;
+  if (ATTRACT) { for (const id of ["stats", "side", "feed", "msg", "hint", "net"]) $(id).style.display = "none"; $("net").textContent = ""; return; }
+  $("haul").innerHTML = `◆ ${me.g}<small>YOUR HAUL</small>`;
+  $("purse").textContent = `Purse ◆ ${save.purse} · best ◆ ${save.best}`;
+  $("hpBar").style.width = Math.max(0, (100 * me.hp) / me.mhp) + "%";
+  const rich = fleet.filter((s) => !s.dn).sort((a, b) => b.g - a.g).slice(0, 5);
+  $("rich").innerHTML = `<h4>RICHEST SHIPS</h4>` + rich.map((s) => `<div class="${s === me ? "mine" : ""}"><span><i style="background:${esc(s.color)}"></i>${esc(s === me ? "You" : s.name)}</span><span>◆ ${s.g}</span></div>`).join("");
+  $("feed").innerHTML = feedLines.filter((l) => now - l.at < 6000).map((l) => `<div>${l.text}</div>`).join("");
+  $("msg").style.opacity = now < msgUntil ? 1 : 0;
+  const touch = matchMedia("(pointer: coarse)").matches;
+  $("hint").textContent = touch ? "Left thumb steers · tap the sea or FIRE to shoot that side · sail over treasure to grab it" : "A/D steer · W full sail · S slow · click either side of your ship (or Q/E) to fire · sail over treasure";
+  $("hint").style.opacity = now - startedAt < 12000 && !me.dn ? 1 : 0;
+  const n = livePlayers().length;
+  $("net").textContent = net.offline ? "Offline: playing with bots" : netDown ? "Reconnecting…" : `Online · ${n} player${n === 1 ? "" : "s"}${isHost() ? " · you run the bot ships" : ""}`;
+  const sunkCard = me.dn && now - me.sunkAt > 1300;
+  $("over").hidden = !sunkCard;
+  if (sunkCard && boardFor !== me.sk) {
+    boardFor = me.sk;
+    $("overSub").innerHTML = `${me.byName ? `by <b>${esc(me.byName)}</b>. ` : ""}Your haul of <b style="color:#ffd45c">◆ ${me.g}</b> went down with the ship; part of it is floating up for the others.<br>Your purse and upgrades are safe.`;
+    showBoard(me.g);
+  }
+  if (!me.dn && me.g >= submitted + 20 && me.g >= save.best && now - lastSubmit > 20000) { lastSubmit = now; submitted = me.g; if (board) board.submit(me.g).catch(() => {}); }
+  drawMini();
+}
+function showBoard(haul) {
+  const list = $("board");
+  if (!board) { list.innerHTML = "<li>Leaderboards need a connection.</li>"; return; }
+  list.innerHTML = "<li>Loading…</li>";
+  (haul > 0 ? board.submit(haul).catch(() => null) : Promise.resolve()).then(() => board.top(10)).then(({ entries }) => {
+    list.innerHTML = entries.length ? entries.map((e) => `<li>${esc(e.username || "Player")}<span>◆ ${e.score}</span></li>`).join("") : "<li>No hauls yet. Be the first.</li>";
+  }).catch(() => { list.innerHTML = "<li>Couldn't load the leaderboard.</li>"; });
+}
+const mini = $("mini").getContext("2d");
+function drawMini() {
+  const W = 260, R = CONFIG.world + 8, k = (W / 2 - 6) / R, X = (x) => W / 2 + x * k, Z = (z) => W / 2 + z * k;
+  mini.clearRect(0, 0, W, W);
+  mini.fillStyle = "#e9d29a"; for (const o of islands()) { mini.beginPath(); mini.arc(X(o.x), Z(o.z), o.r * k * 1.1, 0, TAU); mini.fill(); }
+  mini.fillStyle = "#ffd45c"; for (const it of lootList()) if (!me.picked.has(it.i)) mini.fillRect(X(it.x) - 2, Z(it.z) - 2, it.k === 2 ? 6 : 4, it.k === 2 ? 6 : 4);
+  for (const s of fleet) {
+    if (s.dn) continue;
+    mini.save(); mini.translate(X(s.x), Z(s.z)); mini.rotate(-s.h); mini.fillStyle = s.color; mini.strokeStyle = s === me ? "#fff" : "#0008"; mini.lineWidth = s === me ? 3 : 1.5;
+    mini.beginPath(); mini.moveTo(0, 9); mini.lineTo(5, -6); mini.lineTo(-5, -6); mini.closePath(); mini.fill(); mini.stroke(); mini.restore();
+  }
+}
+$("again").onclick = () => { $("over").hidden = true; setSail(); };
+$("yardBtn").onclick = openYard; $("overYard").onclick = openYard;
+$("yardClose").onclick = () => { $("yard").hidden = true; };
+
+// ── INPUT ───────────────────────────────────────────────────────────────────────────
+const keys = new Set(), cv = renderer.domElement, touchUI = matchMedia("(pointer: coarse)").matches && !ATTRACT;
+addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if (k === " " || k.startsWith("arrow")) e.preventDefault();
+  if (e.repeat) { keys.add(k); return; }
+  keys.add(k);
+  if (k === "q") fire(1); else if (k === "e") fire(-1); else if (k === " ") fireAuto(); else if (k === "u") openYard(); else if (k === "escape") $("yard").hidden = true;
+});
+addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+addEventListener("blur", () => keys.clear());
+addEventListener("pointerdown", () => { try { audio ||= new AudioContext(); } catch {} }, { once: true });
+addEventListener("keydown", () => { try { audio ||= new AudioContext(); } catch {} }, { once: true });
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), seaPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitAt = new THREE.Vector3();
+/** Fire the side of my ship that faces a point on the screen (turned into the sea through the camera). */
+function fireToward(clientX, clientY) {
+  ndc.set((clientX / innerWidth) * 2 - 1, -(clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  if (!ray.ray.intersectPlane(seaPlane, hitAt)) return;
+  fire((hitAt.x - me.x) * Math.cos(me.h) - (hitAt.z - me.z) * Math.sin(me.h) > 0 ? 1 : -1);
+}
+// Touch: drag on the left half for a thumb stick that points where to sail; tap the right half to fire that way.
+const stick = { id: null, x0: 0, y0: 0, dx: 0, dy: 0 }, stickEl = $("stick");
+cv.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  if (e.pointerType === "mouse") { if (e.button === 0) fireToward(e.clientX, e.clientY); return; }
+  if (e.clientX < innerWidth / 2 && stick.id === null) {
+    Object.assign(stick, { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 });
+    Object.assign(stickEl.style, { left: e.clientX + "px", top: e.clientY + "px" }); stickEl.hidden = false;
+  } else fireToward(e.clientX, e.clientY);
+});
+cv.addEventListener("pointermove", (e) => {
+  if (e.pointerId !== stick.id) return;
+  let dx = e.clientX - stick.x0, dy = e.clientY - stick.y0; const d = Math.hypot(dx, dy);
+  if (d > 50) { dx *= 50 / d; dy *= 50 / d; }
+  stick.dx = dx; stick.dy = dy; stickEl.firstChild.style.transform = `translate(${dx}px, ${dy}px)`;
+});
+for (const ev of ["pointerup", "pointercancel"]) addEventListener(ev, (e) => { if (e.pointerId === stick.id) { stick.id = null; stickEl.hidden = true; } });
+document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+const fireBtn = $("fire"); fireBtn.hidden = !touchUI;
+fireBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); fireBtn.classList.add("on"); fireAuto(); });
+for (const ev of ["pointerup", "pointercancel", "pointerleave"]) fireBtn.addEventListener(ev, () => fireBtn.classList.remove("on"));
+/** Turn keys and the stick into this frame's steering and sail. The camera looks north, so the stick is a compass. */
+function readInput() {
+  const left = keys.has("a") || keys.has("arrowleft"), right = keys.has("d") || keys.has("arrowright");
+  input.turn = (left ? 1 : 0) - (right ? 1 : 0);
+  input.throttle = keys.has("w") || keys.has("arrowup") ? 1 : keys.has("s") || keys.has("arrowdown") ? CONFIG.slow : CONFIG.cruise;
+  input.want = null;
+  const len = Math.hypot(stick.dx, stick.dy);
+  if (stick.id !== null && len > 12) { input.want = Math.atan2(stick.dx, stick.dy); input.throttle = len > 40 ? 1 : CONFIG.cruise; }
+}
+
+// ── MAIN LOOP ───────────────────────────────────────────────────────────────────────
+let last = performance.now(), lastHb = 0, lastHud = 0;
+const focus = new THREE.Vector3(), camOff = new THREE.Vector3();
+function frame(now) {
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  const t = now / 1000;
+  if (now - lastHb > 1000) { lastHb = now; net.me.set("hb", Date.now()); fixColor(); }
+  if (isHost()) hostTick(dt, now); else host.acting = false;
+  islands();
+  if (!ATTRACT) readInput();
+  myTick(dt);
+  syncShips(dt, t);
+  stepBalls(dt, t); stepBits(dt); stepFoam(dt, t); stepFloats(dt); drawTreasure(t);
+  if (isleGroup) for (const m of isleGroup.children) if (m.name === "foam") m.material.opacity = 0.32 + Math.sin(t * 1.6) * 0.12;
+  // a high camera that looks north and follows my ship, a little ahead of it (higher on a phone held upright)
+  const tall = innerHeight > innerWidth ? 1.45 : 1, lead = me.dn ? 0 : 0.6;
+  camOff.set(0, 27, 24).multiplyScalar(tall * (ATTRACT ? 0.8 : 1));
+  focus.lerp(P3.set(me.x + Math.sin(me.h) * me.sp * lead, 0, me.z + Math.cos(me.h) * me.sp * lead), 1 - Math.pow(0.02, dt));
+  camera.position.copy(focus).add(camOff);
+  if (now - me.hurtAt < 220 && !ATTRACT) camera.position.x += (Math.random() - 0.5) * 0.6;
+  camera.lookAt(focus);
+  sun.position.set(focus.x + 30, 55, focus.z + 18); sun.target.position.copy(focus);
+  updateOcean(t, focus.x, focus.z - 30);
+  renderer.render(scene, camera);
+  if (saveDirty && now - lastSave > 3000) storeSave();
+  if (now - lastHud > 100) { lastHud = now; hud(); }
+  requestAnimationFrame(frame);
+}
+
+(async function start() {
+  net = await connect();
+  net.onState((st) => { S = st; });
+  net.on("hit", (m, from) => {
+    if (!m) return;
+    if (m.to === net.sessionId) hurtMe(m.d, m.by || from);
+    else if (host.acting && host.bots.has(m.to)) hitBot(host.bots.get(m.to), m.d, m.by || from);
+  });
+  net.on("grab", (m, from) => { if (host.acting && m) grab(+m.i, from, { x: +m.x, z: +m.z }); });
+  net.on("boom", (m) => { if (m && typeof m.x === "number") broadside({ id: m.i, x: m.x, z: m.z, h: m.h, sp: m.sp || 0, lv: [0, Math.max(0, (m.n || 2) - CONFIG.guns), 0] }, m.s > 0 ? 1 : -1, null); });
+  net.on("sunk", (m) => { if (m) addFeed(m); });
+  net.onDisconnect(() => { netDown = true; });
+  net.onReconnect(() => { netDown = false; });
+  joinedAt = performance.now();
+  const taken = new Set(Object.entries(S.entities.players || {}).filter(([id]) => id !== net.sessionId).map(([, p]) => p.c));
+  me.id = net.sessionId; me.color = COLORS.find((c) => !taken.has(c)) || COLORS[Math.floor(Math.random() * COLORS.length)];
+  net.me.set({ n: myName, c: me.color, hb: Date.now() });
+  if (!net.offline && typeof MP !== "undefined") { player = MP.auth({ key: MP_CONNECT.key, apiUrl: MP_CONNECT.apiUrl }); board = player.leaderboard(CONFIG.board); }
+  await Promise.race([loadSave(), new Promise((ok) => setTimeout(ok, 3000))]); // a slow save never holds up the game
+  if (ATTRACT) me.lv = [2, 2, 1];
+  if (new URLSearchParams(location.search).has("test")) window.__test = { me, host, fleet: () => fleet, S: () => S, isHost, fire, islands, lootList };
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "Pirate Seas",
+  "genre": "rpg",
+  "dim": "3D",
+  "mode": "Drop-in",
+  "players": "2–16",
+  "hook": "Fire broadsides, sink rivals, sail off with the gold.",
+  "how": "Sail between the islands grabbing floating treasure, and turn side-on to rival ships to hit them with a broadside. Sink a ship and its gold floats up for the taking; get sunk and you lose your haul, but your purse buys ship upgrades that stay with you.",
+  "controls": "A/D to steer, W/S for sail, click either side of your ship or Q/E to fire; on touch, a thumb stick and tap to fire",
+  "uses": [
+    ["Saves", "Your purse, hull, cannon and sail upgrades and best haul are saved for next time."],
+    ["Leaderboard", "The biggest haul one ship carried before it sank."],
+    ["Host-run rules", "The host's browser sails the bot ships, drops the treasure and decides who grabbed it first; if it leaves, the next player takes over."],
+    ["Bots", "Bot captains fill the sea until enough people join."],
+    ["Live sync", "Every ship, broadside and splash shows up for everyone at once."],
+    ["Live ops", "Run a gold rush (more gold in every chest) without touching the code."]
+  ],
+  "ideas": [
+    "Add a sea monster that attacks every ship",
+    "Add a fort on the big island that shoots at ships",
+    "Let players buy a new ship shape in the shipyard"
+  ]
+}
