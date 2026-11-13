@@ -35,6 +35,7 @@
   .card h2 { margin: 0; font-size: 26px; color: #ffd45c; } .card h3 { margin: 14px 0 4px; font-size: 13px; color: #8fe3ff; text-align: left; }
   .card p { margin: 6px 0; font-size: 14px; opacity: .85; }
   .card ol { margin: 0; padding-left: 24px; font-size: 14px; text-align: left; }
+  .card li.note { list-style: none; margin-left: -24px; opacity: .8; }
   .card li span { float: right; font-variant-numeric: tabular-nums; }
   button.go { width: 100%; min-height: 48px; margin-top: 14px; border: 0; border-radius: 12px; background: #ffd45c; color: #3a2400; font: 800 17px system-ui, sans-serif; cursor: pointer; }
   button.alt { background: #ffffff1f; color: #fff; margin-top: 8px; }
@@ -69,7 +70,7 @@
 <button id="fire" hidden>FIRE</button>
 <div class="panel" id="over" hidden><div class="card">
   <h2>Sunk!</h2><p id="overSub"></p>
-  <h3>Best hauls</h3><ol id="board"><li>Loading…</li></ol>
+  <h3>Best hauls</h3><ol id="board"><li class="note">Loading…</li></ol>
   <button class="go" id="again">Set sail again</button>
   <button class="go alt" id="overYard">Shipyard</button>
 </div></div>
@@ -776,6 +777,7 @@ function stepBot(b, dt, t) {
     }
     for (const side of [1, -1]) if (d < CONFIG.botRange && b.cd[side > 0 ? 0 : 1] <= 0 && !foe.sh && Math.abs(angleDiff(to, b.h + side * Math.PI / 2)) < CONFIG.botAim) {
       b.cd[side > 0 ? 0 : 1] = CONFIG.reload * (1 + Math.random() * 0.4);
+      b.sh = 0; // firing drops a bot's spawn shield, same as a player's
       broadside(b, side, b.id); net.send("boom", boomMsg(b, side));
     }
   } else if (g.gold) { const it = host.loot.find((l) => l.i === g.gold); if (it) { want = Math.atan2(it.x - b.x, it.z - b.z); throttle = 1; } else b.think = 0; }
@@ -1028,11 +1030,11 @@ function hud() {
 }
 function showBoard(haul) {
   const list = $("board");
-  if (!board) { list.innerHTML = "<li>Leaderboards need a connection.</li>"; return; }
-  list.innerHTML = "<li>Loading…</li>";
+  if (!board) { list.innerHTML = "<li class='note'>Leaderboards need a connection.</li>"; return; }
+  list.innerHTML = "<li class='note'>Loading…</li>";
   (haul > 0 ? board.submit(haul).catch(() => null) : Promise.resolve()).then(() => board.top(10)).then(({ entries }) => {
-    list.innerHTML = entries.length ? entries.map((e) => `<li>${esc(e.username || "Player")}<span>◆ ${e.score}</span></li>`).join("") : "<li>No hauls yet. Be the first.</li>";
-  }).catch(() => { list.innerHTML = "<li>Couldn't load the leaderboard.</li>"; });
+    list.innerHTML = entries.length ? entries.map((e) => `<li>${esc(e.username || "Player")}<span>◆ ${e.score}</span></li>`).join("") : "<li class='note'>No hauls yet. Be the first.</li>";
+  }).catch(() => { list.innerHTML = "<li class='note'>Couldn't load the leaderboard.</li>"; });
 }
 const mini = $("mini").getContext("2d");
 function drawMini() {
@@ -1080,6 +1082,7 @@ cv.addEventListener("pointerdown", (e) => {
     Object.assign(stickEl.style, { left: e.clientX + "px", top: e.clientY + "px" }); stickEl.hidden = false;
   } else fireToward(e.clientX, e.clientY);
 });
+cv.addEventListener("contextmenu", (e) => e.preventDefault()); // right-click on the sea doesn't open the browser menu
 cv.addEventListener("pointermove", (e) => {
   if (e.pointerId !== stick.id) return;
   let dx = e.clientX - stick.x0, dy = e.clientY - stick.y0; const d = Math.hypot(dx, dy);
