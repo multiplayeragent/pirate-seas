@@ -111,7 +111,8 @@
  *     A new host adopts all of it from state and carries on: same sea, same bots.
  *   - Cannonballs fly on every screen ("boom" event = an effect). Only the shooter's own
  *     balls count (the host counts its bots'): a hit sends "hit" {to, d, by}. The ship's
- *     owner takes the damage: a player its own hp, the host a bot's.
+ *     owner takes the damage: a player its own hp, the host a bot's. A hit counts for its sender
+ *     (only the host may name one of its bots as `by`), from a ship in range, no faster than reload.
  *   - "grab" {i, x, z} (intent): your hull is over treasure. The host gives it to the first who
  *     asks and writes it in `awards`; you add the gold to your own haul and purse.
  *   - Sinking: you set your own `p.dn` and bump `p.sk`. The host sees that in state, spills
@@ -148,6 +149,7 @@ const CONFIG = {
   ballLift: 5,           // cannonball upward speed (more = longer range)
   gravity: 13,
   ballDamage: 12,
+  hitRange: 55,          // a hit is only taken from a ship this close (a cannonball flies about 45)
   shield: 3,             // seconds nobody can hit you after you set sail
   botRespawn: 5,         // seconds before a sunk bot sails again
   botAim: 0.3,           // radians: how lined up a bot must be before it fires
@@ -539,6 +541,18 @@ function stepBalls(dt, t) {
   for (const b of balls) { M.compose(P3.set(b.x, b.y, b.z), Q.identity(), ONE); ballMesh.setMatrixAt(n++, M); }
   ballMesh.count = n; ballMesh.instanceMatrix.needsUpdate = true;
 }
+/** Who a "hit" message counts for: its sender (or, from the host, the bot it names), if that ship is close enough to have
+ *  fired it and hasn't hit us more often than its cannons reload (two full broadsides per reload). Else null: ignore it. */
+const hitLog = new Map();
+function hitFrom(m, from, target) {
+  const by = m.by && m.by !== from && from === livePlayers()[0] && botList().some((b) => b.id === m.by) ? m.by : from;
+  const s = fleet.find((f) => f.id === by), now = performance.now();
+  if (!s || Math.hypot(s.x - target.x, s.z - target.z) > CONFIG.hitRange) return null;
+  const log = (hitLog.get(by) || []).filter((t) => now - t < CONFIG.reload * 1000);
+  if (log.length >= 2 * gunsPerSide(s.lv)) return null;
+  log.push(now); hitLog.set(by, log);
+  return by;
+}
 /** A counted cannonball hit ship `target`. Its owner takes the damage: me, the host (bots), or by event. */
 function damage(target, by) {
   const d = CONFIG.ballDamage;
@@ -681,7 +695,7 @@ function spawnTreasure(x, z, gold, kind) {
 /** "grab": the first ship to ask for a treasure gets it. Bots keep their gold; players read it from awards.
  *  A player's intent carries where its ship was (its position update may arrive just after the intent). */
 function grab(i, by, at) {
-  const it = host.loot.find((l) => l.i === i), s = fleet.find((f) => f.id === by), p = at && Number.isFinite(at.x) ? at : s;
+  const it = host.loot.find((l) => l.i === i), s = fleet.find((f) => f.id === by), p = at && Number.isFinite(at.x) && Number.isFinite(at.z) ? at : s;
   if (!it || !s || s.dn || Math.hypot(p.x - s.x, p.z - s.z) > 15 || Math.hypot(p.x - it.x, p.z - it.z) > CONFIG.grab + 1.5) return;
   host.loot = host.loot.filter((l) => l !== it); host.dirtyLoot = true;
   const b = host.bots.get(by);
@@ -914,7 +928,7 @@ function syncShips(dt, t) {
   for (const [id, p] of Object.entries(S.entities.players || {})) {
     if (id === net.sessionId || !live.has(id)) continue;
     const q = parseOnce("p:" + id, p.p, null);
-    if (q) remote.push({ ...q, id, name: String(p.n ?? "Pirate"), color: p.c || "#ccc", lv: q.lv || [0, 0, 0], bot: false, raw: p.p });
+    if (q) remote.push({ ...q, id, name: String(p.n ?? "Pirate"), color: p.c || "#ccc", lv: [0, 1, 2].map((k) => clamp((q.lv || [])[k] | 0, 0, 4)), bot: false, raw: p.p }); // upgrade levels are 0-4
   }
   for (const b of botList()) remote.push(host.acting ? b : { ...b, raw: S.shared.bots });
   for (const r of remote) {
@@ -1140,11 +1154,11 @@ function frame(now) {
   net.onState((st) => { S = st; });
   net.on("hit", (m, from) => {
     if (!m) return;
-    if (m.to === net.sessionId) hurtMe(m.d, m.by || from);
-    else if (host.acting && host.bots.has(m.to)) hitBot(host.bots.get(m.to), m.d, m.by || from);
+    if (m.to === net.sessionId) { const by = hitFrom(m, from, me); if (by) hurtMe(m.d, by); }
+    else if (host.acting && host.bots.has(m.to)) { const b = host.bots.get(m.to), by = hitFrom(m, from, b); if (by) hitBot(b, m.d, by); }
   });
   net.on("grab", (m, from) => { if (host.acting && m) grab(+m.i, from, { x: +m.x, z: +m.z }); });
-  net.on("boom", (m) => { if (m && typeof m.x === "number") broadside({ id: m.i, x: m.x, z: m.z, h: m.h, sp: m.sp || 0, lv: [0, Math.max(0, (m.n || 2) - CONFIG.guns), 0] }, m.s > 0 ? 1 : -1, null); });
+  net.on("boom", (m) => { if (m && typeof m.x === "number") broadside({ id: m.i, x: m.x, z: m.z, h: m.h, sp: m.sp || 0, lv: [0, clamp((m.n | 0) - CONFIG.guns, 0, 4), 0] }, m.s > 0 ? 1 : -1, null); });
   net.on("sunk", (m) => { if (m) addFeed(m); });
   net.onDisconnect(() => { netDown = true; });
   net.onReconnect(() => { netDown = false; });
